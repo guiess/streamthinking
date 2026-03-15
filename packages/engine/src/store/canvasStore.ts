@@ -16,6 +16,8 @@ import { enableMapSet } from 'immer';
 import { nanoid } from 'nanoid';
 import {
   visualExpressionSchema,
+  protocolOperationSchema,
+  DEFAULT_EXPRESSION_STYLE,
 } from '@infinicanvas/protocol';
 import type {
   VisualExpression,
@@ -136,6 +138,8 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
           position: expression.position,
           size: expression.size,
           data: expression.data,
+          style: expression.style,
+          angle: expression.angle,
         });
         pushOperation(state.operationLog, operation);
 
@@ -330,6 +334,16 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
     // ── Remote operations (NO operationLog append) ────────────
 
     applyRemoteOperation: (op: ProtocolOperation) => {
+      // Validate incoming remote operation against schema [R5]
+      const opResult = protocolOperationSchema.safeParse(op);
+      if (!opResult.success) {
+        console.warn(
+          '[canvasStore] Invalid remote operation rejected:',
+          opResult.error.issues,
+        );
+        return;
+      }
+
       set((state) => {
         switch (op.payload.type) {
           case 'create': {
@@ -339,15 +353,8 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
               kind: p.kind,
               position: p.position,
               size: p.size,
-              angle: 0,
-              style: {
-                strokeColor: '#000000',
-                backgroundColor: 'transparent',
-                fillStyle: 'none',
-                strokeWidth: 2,
-                roughness: 1,
-                opacity: 1,
-              },
+              angle: p.angle ?? 0,
+              style: p.style ?? { ...DEFAULT_EXPRESSION_STYLE },
               meta: {
                 author: op.author,
                 createdAt: op.timestamp,
@@ -357,6 +364,15 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
               },
               data: p.data,
             };
+            // Validate reconstructed expression [R5]
+            const exprResult = visualExpressionSchema.safeParse(expr);
+            if (!exprResult.success) {
+              console.warn(
+                '[canvasStore] Invalid expression from remote create rejected:',
+                exprResult.error.issues,
+              );
+              break;
+            }
             state.expressions[p.expressionId] = expr;
             state.expressionOrder.push(p.expressionId);
             break;
