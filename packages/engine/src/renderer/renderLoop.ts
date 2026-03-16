@@ -96,7 +96,7 @@ export function createRenderLoop(
     applyTransform(ctx, camera, dpr);
 
     // 3. Render grid (in world coordinates)
-    renderGrid(ctx, camera, width, height);
+    // Grid removed — true infinite canvas with no visual boundaries
 
     // 4. Render expressions in z-order [AC1]
     if (roughCanvas && expressionProvider) {

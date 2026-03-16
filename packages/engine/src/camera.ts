@@ -15,8 +15,8 @@ import type { VisualExpression } from '@infinicanvas/protocol';
 import type { Camera } from './types/index.js';
 
 /** User-facing zoom bounds for zoom controls. */
-export const MIN_ZOOM = 0.1;
-export const MAX_ZOOM = 5.0;
+export const MIN_ZOOM = 0.001;
+export const MAX_ZOOM = 1000;
 
 /** Zoom increment per button press (20%). */
 export const ZOOM_STEP = 0.2;
