@@ -128,24 +128,27 @@ function translateExpressionPoints(
 ): void {
   if (!POINT_BASED_KINDS.has(expr.kind)) return;
 
-  const data = expr.data as { points?: unknown[] };
+  const data = expr.data as { points?: unknown[]; startBinding?: unknown; endBinding?: unknown };
   if (!data.points || data.points.length === 0) return;
 
   if (expr.kind === 'freehand') {
-    // Freehand: [x, y, pressure]
     const points = data.points as [number, number, number][];
     for (const point of points) {
       point[0] += dx;
       point[1] += dy;
-      // point[2] (pressure) is preserved
     }
   } else {
-    // Line/Arrow: [x, y]
     const points = data.points as [number, number][];
     for (const point of points) {
       point[0] += dx;
       point[1] += dy;
     }
+  }
+
+  // Clear bindings when arrow is moved by body — detach from shapes
+  if (expr.kind === 'arrow') {
+    data.startBinding = undefined;
+    data.endBinding = undefined;
   }
 }
 
