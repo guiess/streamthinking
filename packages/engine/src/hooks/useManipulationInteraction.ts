@@ -431,7 +431,7 @@ export function useManipulationInteraction(
   return { cursor };
 }
 
-const DRAG_SNAP_DISTANCE = 50;
+const DRAG_SNAP_DISTANCE = 15;
 
 /** Find snap point during endpoint drag, excluding the arrow itself. */
 function findSnapPointForDrag(

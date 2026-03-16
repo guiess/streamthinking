@@ -59,7 +59,7 @@ export function findSnapPoint(
 
   for (const { anchor, point, ratio } of edgePoints) {
     const dist = Math.hypot(worldPoint.x - point.x, worldPoint.y - point.y);
-    if (closest === null || dist < closest.dist) {
+    if (dist <= snapDistance && (closest === null || dist < closest.dist)) {
       closest = { anchor, point, dist, ratio };
     }
   }
