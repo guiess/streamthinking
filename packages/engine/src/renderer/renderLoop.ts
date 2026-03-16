@@ -64,6 +64,7 @@ export function createRenderLoop(
   expressionProvider?: ExpressionProvider,
   selectionProvider?: SelectionProvider,
   drawPreviewProvider?: DrawPreviewProvider,
+  dpr: number = 1,
 ): RenderLoop {
   let width = initialWidth;
   let height = initialHeight;
@@ -75,12 +76,12 @@ export function createRenderLoop(
 
     const camera = getCamera();
 
-    // 1. Clear canvas — use identity transform for full clear
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    // 1. Clear canvas — use DPR-scaled identity for full clear
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, width, height);
 
-    // 2. Apply camera transform
-    applyTransform(ctx, camera);
+    // 2. Apply camera transform (includes DPR scaling)
+    applyTransform(ctx, camera, dpr);
 
     // 3. Render grid (in world coordinates)
     renderGrid(ctx, camera, width, height);

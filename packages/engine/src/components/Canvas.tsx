@@ -118,7 +118,8 @@ function CanvasInner() {
     const drawPreviewProvider = {
       getDrawPreview,
     };
-    const loop = createRenderLoop(ctx, getCamera, width, height, roughCanvas, expressionProvider, selectionProvider, drawPreviewProvider);
+    const dpr = window.devicePixelRatio || 1;
+    const loop = createRenderLoop(ctx, getCamera, width, height, roughCanvas, expressionProvider, selectionProvider, drawPreviewProvider, dpr);
 
     renderLoopRef.current = loop;
     loop.start();

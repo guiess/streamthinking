@@ -64,15 +64,18 @@ export function worldToScreen(
 export function applyTransform(
   ctx: CanvasRenderingContext2D,
   camera: Camera,
+  dpr: number = 1,
 ): void {
-  // The `|| 0` normalizes -0 → 0 (JavaScript quirk: -0 * 1 === -0)
+  // Combine DPR scaling with camera transform so rendering is crisp
+  // and coordinates map correctly on HiDPI displays
+  const scale = camera.zoom * dpr;
   ctx.setTransform(
-    camera.zoom,
+    scale,
     0,
     0,
-    camera.zoom,
-    -camera.x * camera.zoom || 0,
-    -camera.y * camera.zoom || 0,
+    scale,
+    -camera.x * scale || 0,
+    -camera.y * scale || 0,
   );
 }
 
