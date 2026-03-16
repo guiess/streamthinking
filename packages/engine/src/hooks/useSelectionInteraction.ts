@@ -68,6 +68,20 @@ export function useSelectionInteraction(
     // Only react to primary button (left click)
     if (e.button !== 0) return;
 
+    // Check if clicking on an already-selected shape — let manipulation hook handle it
+    const camera = state.camera;
+    const worldPoint = screenToWorld(e.offsetX, e.offsetY, camera);
+    const hitId = findExpressionAtPoint(
+      worldPoint,
+      state.expressions,
+      state.expressionOrder,
+      HIT_TOLERANCE_PX / camera.zoom,
+    );
+    if (hitId && state.selectedIds.has(hitId) && !e.shiftKey) {
+      // Already selected — manipulation hook will handle the drag
+      return;
+    }
+
     // Capture pointer to receive events even when cursor leaves canvas [S5-4]
     const target = e.currentTarget as Element;
     target.setPointerCapture(e.pointerId);
