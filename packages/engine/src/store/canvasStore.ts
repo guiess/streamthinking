@@ -45,8 +45,9 @@ import {
   findBoundArrows,
   getAnchorPoint,
   clearBindingsForDeletedExpression,
+  findSnapPoint,
 } from '../interaction/connectorHelpers.js';
-import type { ArrowData } from '@infinicanvas/protocol';
+import type { ArrowData, ArrowAnchor, ArrowBinding } from '@infinicanvas/protocol';
 
 // Enable immer support for Set/Map (used by selectedIds: Set<string>)
 enableMapSet();
@@ -733,9 +734,44 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
           }
         }
 
-        // Update arrows bound to the moved shapes [CLEAN-CODE]
+        // Update arrows bound to the moved shapes
         const movedIds = new Set(moves.map((m) => m.id));
         updateBoundArrows(state, movedIds);
+
+        // Re-snap moved arrows to nearby shapes
+        for (const move of moves) {
+          const expr = state.expressions[move.id];
+          if (!expr || expr.kind !== 'arrow') continue;
+
+          const data = expr.data as { points: [number, number][]; startBinding?: ArrowBinding; endBinding?: ArrowBinding; kind: string };
+          if (data.points.length < 2) continue;
+
+          const RESNAP_DIST = 15;
+          const startPt = data.points[0]!;
+          const endPt = data.points[data.points.length - 1]!;
+
+          // Check start point for snap
+          for (const [id, target] of Object.entries(state.expressions)) {
+            if (id === move.id) continue;
+            const snap = findSnapPoint({ x: startPt[0], y: startPt[1] }, target, RESNAP_DIST);
+            if (snap) {
+              data.startBinding = { expressionId: id, anchor: snap.anchor as ArrowAnchor, ratio: snap.ratio };
+              data.points[0] = [snap.point.x, snap.point.y];
+              break;
+            }
+          }
+
+          // Check end point for snap
+          for (const [id, target] of Object.entries(state.expressions)) {
+            if (id === move.id) continue;
+            const snap = findSnapPoint({ x: endPt[0], y: endPt[1] }, target, RESNAP_DIST);
+            if (snap) {
+              data.endBinding = { expressionId: id, anchor: snap.anchor as ArrowAnchor, ratio: snap.ratio };
+              data.points[data.points.length - 1] = [snap.point.x, snap.point.y];
+              break;
+            }
+          }
+        }
 
         for (const move of moves) {
           const operation = createOperation('move', {
