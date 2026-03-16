@@ -21,6 +21,7 @@ const COLOR_PALETTE = [
   '#e03131', // Red
   '#1971c2', // Blue
   '#2f9e44', // Green
+  '#f59f00', // Yellow
   '#e8590c', // Orange
   '#9c36b5', // Purple
   '#868e96', // Gray
