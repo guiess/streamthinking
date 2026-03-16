@@ -164,6 +164,9 @@ function updateBoundArrows(
   state: CanvasState,
   movedIds: Set<string>,
 ): void {
+  // Collect all arrows that need updating
+  const processedArrows = new Set<string>();
+
   for (const targetId of movedIds) {
     const target = state.expressions[targetId];
     if (!target) continue;
@@ -171,6 +174,8 @@ function updateBoundArrows(
     const arrowIds = findBoundArrows(targetId, state.expressions);
     for (const arrowId of arrowIds) {
       if (movedIds.has(arrowId)) continue;
+      if (processedArrows.has(arrowId)) continue;
+      processedArrows.add(arrowId);
 
       const arrow = state.expressions[arrowId];
       if (!arrow || arrow.data.kind !== 'arrow') continue;
@@ -179,42 +184,46 @@ function updateBoundArrows(
       const points = data.points;
       if (points.length < 2) continue;
 
-      let changed = false;
+      // Resolve both bound shapes
+      const startTarget = data.startBinding ? state.expressions[data.startBinding.expressionId] : null;
+      const endTarget = data.endBinding ? state.expressions[data.endBinding.expressionId] : null;
 
-      if (data.startBinding?.expressionId === targetId) {
-        // Smart anchor: pick the edge closest to the OTHER end (last point)
-        const otherEnd = { x: points[points.length - 1]![0], y: points[points.length - 1]![1] };
-        const best = findBestAnchor(target, otherEnd);
+      // Use shape centers as reference points for smart routing
+      const startRef = startTarget
+        ? { x: startTarget.position.x + startTarget.size.width / 2, y: startTarget.position.y + startTarget.size.height / 2 }
+        : { x: points[0]![0], y: points[0]![1] };
+      const endRef = endTarget
+        ? { x: endTarget.position.x + endTarget.size.width / 2, y: endTarget.position.y + endTarget.size.height / 2 }
+        : { x: points[points.length - 1]![0], y: points[points.length - 1]![1] };
+
+      // Smart anchor BOTH ends — each faces the other shape's center
+      if (data.startBinding && startTarget) {
+        const best = findBestAnchor(startTarget, endRef);
         data.startBinding.anchor = best.anchor as ArrowAnchor;
         data.startBinding.ratio = best.ratio;
         points[0] = [best.point.x, best.point.y];
-        changed = true;
       }
 
-      if (data.endBinding?.expressionId === targetId) {
-        // Smart anchor: pick the edge closest to the OTHER end (first point)
-        const otherEnd = { x: points[0]![0], y: points[0]![1] };
-        const best = findBestAnchor(target, otherEnd);
+      if (data.endBinding && endTarget) {
+        const best = findBestAnchor(endTarget, startRef);
         data.endBinding.anchor = best.anchor as ArrowAnchor;
         data.endBinding.ratio = best.ratio;
         points[points.length - 1] = [best.point.x, best.point.y];
-        changed = true;
       }
 
-      if (changed) {
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        for (const [px, py] of points) {
-          if (px < minX) minX = px;
-          if (py < minY) minY = py;
-          if (px > maxX) maxX = px;
-          if (py > maxY) maxY = py;
-        }
-        arrow.position = { x: minX, y: minY };
-        arrow.size = {
-          width: Math.max(maxX - minX, 1),
-          height: Math.max(maxY - minY, 1),
-        };
+      // Update bounding box
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const [px, py] of points) {
+        if (px < minX) minX = px;
+        if (py < minY) minY = py;
+        if (px > maxX) maxX = px;
+        if (py > maxY) maxY = py;
       }
+      arrow.position = { x: minX, y: minY };
+      arrow.size = {
+        width: Math.max(maxX - minX, 1),
+        height: Math.max(maxY - minY, 1),
+      };
     }
   }
 }

@@ -195,39 +195,43 @@ export function useManipulationInteraction(
 
             const data = arrow.data as ArrowData;
             const points = data.points as [number, number][];
-            if (points.length === 0) continue;
+            if (points.length < 2) continue;
 
-            let changed = false;
-            if (data.startBinding?.expressionId === targetId) {
-              // Smart anchor: pick edge facing the other end
-              const otherEnd = { x: points[points.length - 1]![0], y: points[points.length - 1]![1] };
-              const best = findBestAnchorForDrag(target, otherEnd);
+            // Resolve both bound shape references for smart routing
+            const startTarget = data.startBinding ? draft.expressions[data.startBinding.expressionId] : null;
+            const endTarget = data.endBinding ? draft.expressions[data.endBinding.expressionId] : null;
+
+            const startRef = startTarget
+              ? { x: startTarget.position.x + startTarget.size.width / 2, y: startTarget.position.y + startTarget.size.height / 2 }
+              : { x: points[0]![0], y: points[0]![1] };
+            const endRef = endTarget
+              ? { x: endTarget.position.x + endTarget.size.width / 2, y: endTarget.position.y + endTarget.size.height / 2 }
+              : { x: points[points.length - 1]![0], y: points[points.length - 1]![1] };
+
+            // Smart anchor BOTH ends — each faces the other shape
+            if (data.startBinding && startTarget) {
+              const best = findBestAnchorForDrag(startTarget, endRef);
               data.startBinding.anchor = best.anchor as ArrowAnchor;
               data.startBinding.ratio = best.ratio;
               points[0] = [best.point.x, best.point.y];
-              changed = true;
             }
-            if (data.endBinding?.expressionId === targetId) {
-              const otherEnd = { x: points[0]![0], y: points[0]![1] };
-              const best = findBestAnchorForDrag(target, otherEnd);
+            if (data.endBinding && endTarget) {
+              const best = findBestAnchorForDrag(endTarget, startRef);
               data.endBinding.anchor = best.anchor as ArrowAnchor;
               data.endBinding.ratio = best.ratio;
               points[points.length - 1] = [best.point.x, best.point.y];
-              changed = true;
             }
 
-            if (changed) {
-              // Recalc bounding box
-              let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-              for (const [px, py] of points) {
-                if (px < minX) minX = px;
-                if (py < minY) minY = py;
-                if (px > maxX) maxX = px;
-                if (py > maxY) maxY = py;
-              }
-              arrow.position = { x: minX, y: minY };
-              arrow.size = { width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) };
+            // Recalc bounding box
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            for (const [px, py] of points) {
+              if (px < minX) minX = px;
+              if (py < minY) minY = py;
+              if (px > maxX) maxX = px;
+              if (py > maxY) maxY = py;
             }
+            arrow.position = { x: minX, y: minY };
+            arrow.size = { width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) };
           }
         }
       });
