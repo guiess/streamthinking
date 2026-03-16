@@ -22,6 +22,8 @@ import {
   ArrowRight,
   Pencil,
   Type,
+  Group,
+  Ungroup,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -120,6 +122,9 @@ export function Toolbar() {
         }}
       />
       <StyleIndicator style={lastUsedStyle} isTransparentFill={isTransparentFill} />
+
+      {/* Group/Ungroup buttons — shown when 2+ expressions selected */}
+      <GroupActions />
     </div>
   );
 }
@@ -153,5 +158,60 @@ function StyleIndicator({
         cursor: 'default',
       }}
     />
+  );
+}
+
+/** Group/Ungroup action buttons — visible when expressions are selected. */
+function GroupActions() {
+  const selectedIds = useCanvasStore((s) => s.selectedIds);
+  const expressions = useCanvasStore((s) => s.expressions);
+  const groupExpressions = useCanvasStore((s) => s.groupExpressions);
+  const ungroupExpressions = useCanvasStore((s) => s.ungroupExpressions);
+
+  if (selectedIds.size < 2) return null;
+
+  // Check if selection can be ungrouped (all share same parentId)
+  const selectedArray = Array.from(selectedIds);
+  const firstParent = expressions[selectedArray[0]!]?.parentId;
+  const canUngroup = firstParent && selectedArray.every(
+    (id) => expressions[id]?.parentId === firstParent,
+  );
+
+  return (
+    <>
+      <div style={{ width: '100%', height: 1, backgroundColor: '#e0e0e0', margin: '2px 0' }} />
+      <button
+        type="button"
+        title="Group (Ctrl+G)"
+        aria-label="Group selected"
+        onClick={() => groupExpressions(selectedArray)}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          width: BUTTON_SIZE, height: BUTTON_SIZE,
+          border: 'none', borderRadius: 6, cursor: 'pointer',
+          backgroundColor: 'transparent',
+          color: 'var(--text-primary, #333333)',
+        }}
+      >
+        <Group size={ICON_SIZE} />
+      </button>
+      {canUngroup && (
+        <button
+          type="button"
+          title="Ungroup (Ctrl+Shift+G)"
+          aria-label="Ungroup selected"
+          onClick={() => ungroupExpressions(firstParent)}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: BUTTON_SIZE, height: BUTTON_SIZE,
+            border: 'none', borderRadius: 6, cursor: 'pointer',
+            backgroundColor: 'transparent',
+            color: 'var(--text-primary, #333333)',
+          }}
+        >
+          <Ungroup size={ICON_SIZE} />
+        </button>
+      )}
+    </>
   );
 }
