@@ -69,14 +69,14 @@ export function renderSelection(
     if (!expr) continue;
 
     // Hide selection UI during arrow endpoint drag
-    if (isDraggingArrowEndpoint && isPointBasedKind(expr.data.kind)) {
+    if (isDraggingArrowEndpoint && isPointBasedKind(expr.kind)) {
       continue;
     }
 
     const { x, y } = expr.position;
     const { width, height } = expr.size;
 
-    if (isPointBasedKind(expr.data.kind)) {
+    if (isPointBasedKind(expr.kind)) {
       // ── Point-based shapes: only show endpoint circles, no bounding box ──
       renderPointHandles(ctx, expr, camera, halfHandle);
     } else {
