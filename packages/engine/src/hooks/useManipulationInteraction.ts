@@ -21,10 +21,10 @@
  */
 
 import { useRef, useEffect, useCallback, useState } from 'react';
-import type { VisualExpression, ArrowBinding } from '@infinicanvas/protocol';
+import type { VisualExpression, ArrowBinding, ArrowData } from '@infinicanvas/protocol';
 import { useCanvasStore } from '../store/canvasStore.js';
 import { screenToWorld } from '../camera.js';
-import { findSnapPoint } from '../interaction/connectorHelpers.js';
+import { findSnapPoint, findBoundArrows, getAnchorPoint } from '../interaction/connectorHelpers.js';
 import {
   detectPointerTarget,
   computeResize,
@@ -173,10 +173,54 @@ export function useManipulationInteraction(
       const dy = worldPoint.y - drag.startWorld.y;
 
       useCanvasStore.setState((draft) => {
+        const movedIds = new Set<string>();
         for (const [id, orig] of drag.originalPositions) {
           const expr = draft.expressions[id];
           if (expr) {
             expr.position = { x: orig.x + dx, y: orig.y + dy };
+            movedIds.add(id);
+          }
+        }
+
+        // Update bound arrows in real-time during drag
+        for (const targetId of movedIds) {
+          const target = draft.expressions[targetId];
+          if (!target) continue;
+
+          const arrowIds = findBoundArrows(targetId, draft.expressions);
+          for (const arrowId of arrowIds) {
+            if (movedIds.has(arrowId)) continue;
+            const arrow = draft.expressions[arrowId];
+            if (!arrow || arrow.data.kind !== 'arrow') continue;
+
+            const data = arrow.data as ArrowData;
+            const points = data.points as [number, number][];
+            if (points.length === 0) continue;
+
+            let changed = false;
+            if (data.startBinding?.expressionId === targetId) {
+              const pt = getAnchorPoint(target, data.startBinding.anchor, data.startBinding.ratio ?? 0.5);
+              points[0] = [pt.x, pt.y];
+              changed = true;
+            }
+            if (data.endBinding?.expressionId === targetId) {
+              const pt = getAnchorPoint(target, data.endBinding.anchor, data.endBinding.ratio ?? 0.5);
+              points[points.length - 1] = [pt.x, pt.y];
+              changed = true;
+            }
+
+            if (changed) {
+              // Recalc bounding box
+              let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+              for (const [px, py] of points) {
+                if (px < minX) minX = px;
+                if (py < minY) minY = py;
+                if (px > maxX) maxX = px;
+                if (py > maxY) maxY = py;
+              }
+              arrow.position = { x: minX, y: minY };
+              arrow.size = { width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) };
+            }
           }
         }
       });
