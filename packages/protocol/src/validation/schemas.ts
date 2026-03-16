@@ -110,6 +110,7 @@ export const lineDataSchema = z.object({
 const arrowBindingSchema = z.object({
   expressionId: z.string().min(1),
   anchor: z.enum(['center', 'top', 'right', 'bottom', 'left', 'auto']),
+  ratio: z.number().min(0).max(1).optional(),
 });
 
 export const arrowDataSchema = z.object({

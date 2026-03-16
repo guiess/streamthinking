@@ -45,12 +45,13 @@ export class ArrowTool implements ToolHandler {
     this.endX = worldX;
     this.endY = worldY;
 
-    // Check for start binding [CLEAN-CODE]
+    // Check for start binding
     const snap = this.findNearestSnap(worldX, worldY);
     if (snap) {
       this.startBinding = {
         expressionId: snap.targetId,
         anchor: snap.anchor as ArrowBinding['anchor'],
+        ratio: snap.ratio,
       };
       this.startX = snap.point.x;
       this.startY = snap.point.y;
@@ -84,13 +85,14 @@ export class ArrowTool implements ToolHandler {
     this.endY = worldY;
     this.isDrawing = false;
 
-    // Check for end binding [CLEAN-CODE]
+    // Check for end binding
     let endBinding: ArrowBinding | undefined;
     const snap = this.findNearestSnap(worldX, worldY);
     if (snap) {
       endBinding = {
         expressionId: snap.targetId,
         anchor: snap.anchor as ArrowBinding['anchor'],
+        ratio: snap.ratio,
       };
       this.endX = snap.point.x;
       this.endY = snap.point.y;
@@ -189,21 +191,21 @@ export class ArrowTool implements ToolHandler {
   private findNearestSnap(
     worldX: number,
     worldY: number,
-  ): { point: { x: number; y: number }; anchor: string; targetId: string } | null {
+  ): { point: { x: number; y: number }; anchor: string; targetId: string; ratio: number } | null {
     const { expressions } = useCanvasStore.getState();
-    let best: { point: { x: number; y: number }; anchor: string; targetId: string; dist: number } | null = null;
+    let best: { point: { x: number; y: number }; anchor: string; targetId: string; dist: number; ratio: number } | null = null;
 
     for (const [id, expr] of Object.entries(expressions)) {
       const snap = findSnapPoint({ x: worldX, y: worldY }, expr, SNAP_DISTANCE);
       if (snap) {
         const dist = Math.hypot(worldX - snap.point.x, worldY - snap.point.y);
         if (!best || dist < best.dist) {
-          best = { point: snap.point, anchor: snap.anchor, targetId: id, dist };
+          best = { point: snap.point, anchor: snap.anchor, targetId: id, dist, ratio: snap.ratio };
         }
       }
     }
 
-    return best ? { point: best.point, anchor: best.anchor, targetId: best.targetId } : null;
+    return best ? { point: best.point, anchor: best.anchor, targetId: best.targetId, ratio: best.ratio } : null;
   }
 }
 

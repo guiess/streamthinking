@@ -21,9 +21,10 @@
  */
 
 import { useRef, useEffect, useCallback, useState } from 'react';
-import type { VisualExpression } from '@infinicanvas/protocol';
+import type { VisualExpression, ArrowBinding } from '@infinicanvas/protocol';
 import { useCanvasStore } from '../store/canvasStore.js';
 import { screenToWorld } from '../camera.js';
+import { findSnapPoint } from '../interaction/connectorHelpers.js';
 import {
   detectPointerTarget,
   computeResize,
@@ -276,28 +277,50 @@ export function useManipulationInteraction(
       const dy = worldPoint.y - drag.startWorld.y;
 
       if (Math.abs(dx) > 0.001 || Math.abs(dy) > 0.001) {
+        // Check for snap when dragging arrow endpoints
+        let snapTarget = worldPoint;
+        let newBinding: ArrowBinding | undefined;
+        const expr = state.expressions[drag.handle.expressionId];
+
+        if (expr && (expr.data.kind === 'arrow' || expr.data.kind === 'line')) {
+          const snap = findSnapPointForDrag(worldPoint, state.expressions, drag.handle.expressionId);
+          if (snap) {
+            snapTarget = snap.point;
+            newBinding = { expressionId: snap.targetId, anchor: snap.anchor as ArrowBinding['anchor'], ratio: snap.ratio };
+          }
+        }
+
         const result = computePointDrag({
           pointIndex: drag.handle.pointIndex,
           originalPoints: drag.originalPoints,
-          newPointPosition: worldPoint,
+          newPointPosition: snapTarget,
         });
 
-        // Build updated data payload preserving kind-specific fields
-        const expr = state.expressions[drag.handle.expressionId];
         if (expr) {
           let updatedData: Record<string, unknown>;
 
           if (expr.data.kind === 'freehand') {
-            // Preserve pressure values for freehand
             const freehandData = expr.data as { kind: 'freehand'; points: [number, number, number][] };
             const newPoints: [number, number, number][] = freehandData.points.map(
               (p) => [p[0], p[1], p[2]] as [number, number, number],
             );
             const pressure = newPoints[drag.handle.pointIndex]?.[2] ?? 0.5;
-            newPoints[drag.handle.pointIndex] = [worldPoint.x, worldPoint.y, pressure];
+            newPoints[drag.handle.pointIndex] = [snapTarget.x, snapTarget.y, pressure];
             updatedData = { ...expr.data, points: newPoints };
           } else {
             updatedData = { ...expr.data, points: result.points };
+          }
+
+          // Update bindings for arrow endpoints
+          if (expr.data.kind === 'arrow') {
+            const isStart = drag.handle.pointIndex === 0;
+            const isEnd = drag.handle.pointIndex === (drag.originalPoints.length - 1);
+            if (isStart) {
+              (updatedData as Record<string, unknown>).startBinding = newBinding ?? undefined;
+            }
+            if (isEnd) {
+              (updatedData as Record<string, unknown>).endBinding = newBinding ?? undefined;
+            }
           }
 
           state.updateExpression(drag.handle.expressionId, {
@@ -330,4 +353,28 @@ export function useManipulationInteraction(
   }, [canvasRef, handlePointerDown, handlePointerMove, handlePointerUp]);
 
   return { cursor };
+}
+
+const DRAG_SNAP_DISTANCE = 50;
+
+/** Find snap point during endpoint drag, excluding the arrow itself. */
+function findSnapPointForDrag(
+  worldPoint: { x: number; y: number },
+  expressions: Record<string, VisualExpression>,
+  excludeId: string,
+): { point: { x: number; y: number }; anchor: string; targetId: string; ratio: number } | null {
+  let best: { point: { x: number; y: number }; anchor: string; targetId: string; dist: number; ratio: number } | null = null;
+
+  for (const [id, expr] of Object.entries(expressions)) {
+    if (id === excludeId) continue;
+    const snap = findSnapPoint(worldPoint, expr, DRAG_SNAP_DISTANCE);
+    if (snap) {
+      const dist = Math.hypot(worldPoint.x - snap.point.x, worldPoint.y - snap.point.y);
+      if (!best || dist < best.dist) {
+        best = { point: snap.point, anchor: snap.anchor, targetId: id, dist, ratio: snap.ratio };
+      }
+    }
+  }
+
+  return best ? { point: best.point, anchor: best.anchor, targetId: best.targetId, ratio: best.ratio } : null;
 }

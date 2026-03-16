@@ -179,13 +179,13 @@ function updateBoundArrows(
       let changed = false;
 
       if (data.startBinding?.expressionId === targetId) {
-        const anchorPt = getAnchorPoint(target, data.startBinding.anchor);
+        const anchorPt = getAnchorPoint(target, data.startBinding.anchor, data.startBinding.ratio ?? 0.5);
         points[0] = [anchorPt.x, anchorPt.y];
         changed = true;
       }
 
       if (data.endBinding?.expressionId === targetId) {
-        const anchorPt = getAnchorPoint(target, data.endBinding.anchor);
+        const anchorPt = getAnchorPoint(target, data.endBinding.anchor, data.endBinding.ratio ?? 0.5);
         points[points.length - 1] = [anchorPt.x, anchorPt.y];
         changed = true;
       }

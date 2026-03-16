@@ -48,24 +48,24 @@ export function findSnapPoint(
   const cy = y + height / 2;
 
   // Project cursor to nearest point on each edge, pick closest
-  const edgePoints: Array<{ anchor: string; point: { x: number; y: number } }> = [
-    { anchor: 'top', point: { x: clamp(worldPoint.x, x, x + width), y } },
-    { anchor: 'bottom', point: { x: clamp(worldPoint.x, x, x + width), y: y + height } },
-    { anchor: 'left', point: { x, y: clamp(worldPoint.y, y, y + height) } },
-    { anchor: 'right', point: { x: x + width, y: clamp(worldPoint.y, y, y + height) } },
+  const edgePoints: Array<{ anchor: string; point: { x: number; y: number }; ratio: number }> = [
+    { anchor: 'top', point: { x: clamp(worldPoint.x, x, x + width), y }, ratio: width > 0 ? (clamp(worldPoint.x, x, x + width) - x) / width : 0.5 },
+    { anchor: 'bottom', point: { x: clamp(worldPoint.x, x, x + width), y: y + height }, ratio: width > 0 ? (clamp(worldPoint.x, x, x + width) - x) / width : 0.5 },
+    { anchor: 'left', point: { x, y: clamp(worldPoint.y, y, y + height) }, ratio: height > 0 ? (clamp(worldPoint.y, y, y + height) - y) / height : 0.5 },
+    { anchor: 'right', point: { x: x + width, y: clamp(worldPoint.y, y, y + height) }, ratio: height > 0 ? (clamp(worldPoint.y, y, y + height) - y) / height : 0.5 },
   ];
 
-  let closest: { anchor: string; point: { x: number; y: number }; dist: number } | null = null;
+  let closest: { anchor: string; point: { x: number; y: number }; dist: number; ratio: number } | null = null;
 
-  for (const { anchor, point } of edgePoints) {
+  for (const { anchor, point, ratio } of edgePoints) {
     const dist = Math.hypot(worldPoint.x - point.x, worldPoint.y - point.y);
     if (closest === null || dist < closest.dist) {
-      closest = { anchor, point, dist };
+      closest = { anchor, point, dist, ratio };
     }
   }
 
   if (!closest) return null;
-  return { point: closest.point, anchor: closest.anchor };
+  return { point: closest.point, anchor: closest.anchor, ratio: closest.ratio };
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -82,30 +82,27 @@ function clamp(value: number, min: number, max: number): number {
 export function getAnchorPoint(
   expression: VisualExpression,
   anchor: string,
+  ratio: number = 0.5,
 ): { x: number; y: number } {
   const { x, y } = expression.position;
   const { width, height } = expression.size;
-  const cx = x + width / 2;
-  const cy = y + height / 2;
 
   if (anchor === 'center' || anchor === 'auto') {
-    return { x: cx, y: cy };
+    return { x: x + width / 2, y: y + height / 2 };
   }
 
-  // All bindable shapes share the same anchor positions
-  // (edge center for rect/sticky-note, cardinal points for ellipse,
-  //  vertices for diamond) — which happen to be at the same coordinates.
+  // Use ratio (0-1) along the edge for precise positioning
   switch (anchor) {
     case 'top':
-      return { x: cx, y };
+      return { x: x + width * ratio, y };
     case 'right':
-      return { x: x + width, y: cy };
+      return { x: x + width, y: y + height * ratio };
     case 'bottom':
-      return { x: cx, y: y + height };
+      return { x: x + width * ratio, y: y + height };
     case 'left':
-      return { x, y: cy };
+      return { x, y: y + height * ratio };
     default:
-      return { x: cx, y: cy };
+      return { x: x + width / 2, y: y + height / 2 };
   }
 }
 
@@ -221,5 +218,5 @@ function resolveBinding(
 ): { x: number; y: number } | null {
   const target = expressions[binding.expressionId];
   if (!target) return null;
-  return getAnchorPoint(target, binding.anchor);
+  return getAnchorPoint(target, binding.anchor, binding.ratio ?? 0.5);
 }

@@ -38,8 +38,10 @@ export type ArrowAnchor = 'center' | 'top' | 'right' | 'bottom' | 'left' | 'auto
 export interface ArrowBinding {
   /** ID of the bound shape expression. */
   expressionId: string;
-  /** Where on the shape the arrow attaches. */
+  /** Which edge of the shape the arrow attaches to. */
   anchor: ArrowAnchor;
+  /** Position along the edge (0-1). 0.5 = center. */
+  ratio?: number;
 }
 
 /** Data for an arrow expression with optional arrowheads. */
