@@ -115,6 +115,12 @@ export function useManipulationInteraction(
         originalSize: { ...expr.size },
         startWorld: worldPoint,
       };
+
+      // Track arrow endpoint drag state for renderer
+      if (expr.data.kind === 'arrow') {
+        isDraggingArrowEndpoint = true;
+        currentDragSnapPoint = null;
+      }
     } else if (target.kind === 'handle') {
       const expr = expressions[target.handle.expressionId];
       if (!expr || expr.meta.locked) return; // AC8: locked guard
@@ -287,6 +293,9 @@ export function useManipulationInteraction(
           if (snap) {
             snapTarget = snap.point;
             newBinding = { expressionId: snap.targetId, anchor: snap.anchor as ArrowBinding['anchor'], ratio: snap.ratio };
+            currentDragSnapPoint = snap.point;
+          } else {
+            currentDragSnapPoint = null;
           }
         }
 
@@ -333,6 +342,8 @@ export function useManipulationInteraction(
     }
 
     dragModeRef.current = { kind: 'none' };
+    isDraggingArrowEndpoint = false;
+    currentDragSnapPoint = null;
   }, []);
 
   // ── Effect: attach/detach event listeners ──────────────────
@@ -378,3 +389,12 @@ function findSnapPointForDrag(
 
   return best ? { point: best.point, anchor: best.anchor, targetId: best.targetId, ratio: best.ratio } : null;
 }
+
+// ── Shared snap state for renderer ──────────────────────────
+// Module-level so the render loop can read it without store subscription
+
+/** Current snap point during arrow endpoint drag (null = no snap). */
+export let currentDragSnapPoint: { x: number; y: number } | null = null;
+
+/** Whether an arrow endpoint drag is in progress. */
+export let isDraggingArrowEndpoint: boolean = false;

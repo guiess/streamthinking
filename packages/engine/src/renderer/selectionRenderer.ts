@@ -19,6 +19,7 @@ import {
   isPointBasedKind,
   getPointHandlePositions,
 } from '../interaction/manipulationHelpers.js';
+import { isDraggingArrowEndpoint } from '../hooks/useManipulationInteraction.js';
 
 /** Selection highlight color. */
 const SELECTION_COLOR = '#4A90D9';
@@ -66,6 +67,11 @@ export function renderSelection(
   for (const id of selectedIds) {
     const expr = expressions[id];
     if (!expr) continue;
+
+    // Hide selection UI during arrow endpoint drag
+    if (isDraggingArrowEndpoint && isPointBasedKind(expr.data.kind)) {
+      continue;
+    }
 
     const { x, y } = expr.position;
     const { width, height } = expr.size;

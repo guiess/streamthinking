@@ -16,6 +16,7 @@ import { renderGrid } from './gridRenderer.js';
 import { renderExpressions } from './primitiveRenderer.js';
 import { renderSelection } from './selectionRenderer.js';
 import { renderDrawPreview } from './drawPreviewRenderer.js';
+import * as dragSnapState from '../hooks/useManipulationInteraction.js';
 
 /** Marquee overlay visual styles (matches useSelectionInteraction constants). */
 const MARQUEE_STROKE_COLOR = '#4A90D9';
@@ -127,6 +128,22 @@ export function createRenderLoop(
       if (preview) {
         renderDrawPreview(ctx, preview);
       }
+    }
+
+    // 6b. Render drag snap indicator (blue circle during arrow endpoint drag)
+    if (dragSnapState.currentDragSnapPoint) {
+      const sp = dragSnapState.currentDragSnapPoint;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(sp.x, sp.y, 6 / camera.zoom, 0, Math.PI * 2);
+      ctx.fillStyle = '#4A90D9';
+      ctx.globalAlpha = 0.8;
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2 / camera.zoom;
+      ctx.setLineDash([]);
+      ctx.stroke();
+      ctx.restore();
     }
 
     // 7. Render marquee overlay (screen-space, after all world-space rendering)
