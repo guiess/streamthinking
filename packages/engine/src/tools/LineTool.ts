@@ -86,7 +86,6 @@ export class LineTool implements ToolHandler {
     const store = useCanvasStore.getState();
     store.addExpression(expression);
     store.setSelectedIds(new Set([id]));
-    store.setActiveTool('select');
 
     this.reset();
   }
