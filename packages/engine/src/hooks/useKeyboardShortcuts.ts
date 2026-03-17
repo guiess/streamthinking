@@ -256,7 +256,7 @@ export function useKeyboardShortcuts(
       // ── Type-to-edit: printable key with selected shape ──
       if (!isModifier && key.length === 1 && !event.altKey) {
         const { selectedIds, activeTool } = useCanvasStore.getState();
-        if (activeTool === 'select' && selectedIds.size === 1 && options.startEditing) {
+        if (selectedIds.size === 1 && options.startEditing) {
           const id = selectedIds.values().next().value;
           if (id) {
             const expr = useCanvasStore.getState().expressions[id];
