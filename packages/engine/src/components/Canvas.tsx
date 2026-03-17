@@ -360,11 +360,20 @@ function InlineEditOverlay({ expression, initialText, camera, onCommit, onCancel
   // Determine font from expression style, falling back to defaults
   const fontFamily = expression.style.fontFamily ?? 'Architects Daughter, cursive';
   const isText = expression.kind === 'text';
-  const isStickyNote = expression.kind === 'sticky-note';
   const data = expression.data as Record<string, unknown>;
-  const baseFontSize = isText && typeof data.fontSize === 'number'
-    ? data.fontSize
-    : expression.style.fontSize ?? 16;
+  const currentLabel = typeof data.label === 'string' ? data.label : (typeof data.text === 'string' ? data.text : '');
+
+  // For text expressions, use the data fontSize. For shapes with labels, auto-scale to shape size.
+  let baseFontSize: number;
+  if (isText && typeof data.fontSize === 'number') {
+    baseFontSize = data.fontSize;
+  } else {
+    // Match the renderer's auto-scale: proportional to shape dimensions
+    const { width, height } = expression.size;
+    const labelLen = Math.max(currentLabel.length, 1);
+    const autoSize = Math.min(height * 0.3, width / (labelLen * 0.6));
+    baseFontSize = Math.max(8, Math.min(autoSize, 72));
+  }
   const scaledFontSize = baseFontSize * camera.zoom;
 
   useEffect(() => {
@@ -416,12 +425,8 @@ function InlineEditOverlay({ expression, initialText, camera, onCommit, onCancel
         borderRadius: '4px',
         outline: 'none',
         fontSize: `${scaledFontSize}px`,
-        fontFamily: isText && typeof data.fontFamily === 'string'
-          ? data.fontFamily
-          : 'sans-serif',
-        textAlign: (isText && typeof data.textAlign === 'string'
-          ? data.textAlign
-          : 'center') as React.CSSProperties['textAlign'],
+        fontFamily: fontFamily,
+        textAlign: 'center' as React.CSSProperties['textAlign'],
         background: isStickyNote && typeof data.color === 'string'
           ? data.color
           : 'white',
