@@ -105,12 +105,13 @@ export function useCanvasInteraction(): CanvasInteraction {
       setCursor(spaceHeldRef.current ? 'grab' : 'default');
     }
     if (isMiddlePanningRef.current) {
-      // Right-click without drag → deselect tool, switch to Select
+      // Right-click without drag → deselect tool + deselect objects
       if (!rightClickMovedRef.current) {
         const { activeTool } = useCanvasStore.getState();
         if (activeTool !== 'select') {
           useCanvasStore.getState().setActiveTool('select');
         }
+        useCanvasStore.getState().setSelectedIds(new Set());
       }
       isMiddlePanningRef.current = false;
       rightClickMovedRef.current = false;
