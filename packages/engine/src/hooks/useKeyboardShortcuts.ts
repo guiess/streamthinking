@@ -83,6 +83,11 @@ export interface UseKeyboardShortcutsOptions {
    * Provided by useDrawingInteraction to cancel mid-draw state.
    */
   cancelDraw: () => void;
+  /**
+   * Callback to start inline editing on a selected expression.
+   * Provided by useInlineEditor. If not provided, type-to-edit is disabled.
+   */
+  startEditing?: (id: string) => void;
 }
 
 /** Return value of the keyboard shortcuts hook. */
@@ -246,6 +251,24 @@ export function useKeyboardShortcuts(
           useCanvasStore.getState().deleteExpressions(deletableIds);
         }
         return;
+      }
+
+      // ── Type-to-edit: printable key with selected shape ──
+      if (!isModifier && key.length === 1 && !event.altKey) {
+        const { selectedIds, activeTool } = useCanvasStore.getState();
+        if (activeTool === 'select' && selectedIds.size === 1 && options.startEditing) {
+          const id = selectedIds.values().next().value;
+          if (id) {
+            const expr = useCanvasStore.getState().expressions[id];
+            if (expr && (expr.kind === 'text' || expr.kind === 'rectangle' || 
+                expr.kind === 'ellipse' || expr.kind === 'diamond' || 
+                expr.kind === 'sticky-note')) {
+              event.preventDefault();
+              options.startEditing(id);
+              return;
+            }
+          }
+        }
       }
 
       // ── Tool switching (single key, no modifier) ──

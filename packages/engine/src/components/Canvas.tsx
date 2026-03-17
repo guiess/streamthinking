@@ -70,7 +70,7 @@ function CanvasInner() {
 
   // Register centralized keyboard shortcuts (tool switching, undo/redo,
   // delete, duplicate, select all, escape, help panel) [Issue #10]
-  const { showShortcutsHelp, setShowShortcutsHelp } = useKeyboardShortcuts({ cancelDraw });
+  const { showShortcutsHelp, setShowShortcutsHelp } = useKeyboardShortcuts({ cancelDraw, startEditing: inlineEditor.startEditing });
 
   const updateCanvasSize = useCallback(() => {
     const canvas = canvasRef.current;

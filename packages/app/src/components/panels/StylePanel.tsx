@@ -298,6 +298,36 @@ export function StylePanel() {
           style={SLIDER_STYLE}
         />
       </Section>
+
+      {/* ── Font Family ── */}
+      <Section label="Font">
+        <select
+          value={currentStyle.fontFamily ?? 'sans-serif'}
+          onChange={(e) => applyStyle({ fontFamily: e.target.value })}
+          style={{ width: '100%', padding: '4px', borderRadius: 4, border: '1px solid var(--border, #ccc)', backgroundColor: 'var(--bg-panel, #fff)', color: 'var(--text-primary, #333)' }}
+        >
+          <option value="sans-serif">Sans Serif</option>
+          <option value="serif">Serif</option>
+          <option value="monospace">Monospace</option>
+          <option value="Caveat, cursive">Handwriting</option>
+          <option value="Georgia, serif">Georgia</option>
+          <option value="Courier New, monospace">Courier</option>
+        </select>
+      </Section>
+
+      {/* ── Font Size ── */}
+      <Section label={`Font Size: ${currentStyle.fontSize ?? 16}px`}>
+        <input
+          type="range"
+          min={8}
+          max={72}
+          step={1}
+          value={currentStyle.fontSize ?? 16}
+          aria-label="Font size"
+          onChange={(e) => applyStyle({ fontSize: parseInt(e.target.value) })}
+          style={SLIDER_STYLE}
+        />
+      </Section>
     </div>
   );
 }
