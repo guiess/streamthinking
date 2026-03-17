@@ -607,9 +607,14 @@ export function renderLabel(
 
   const fontFamily = style.fontFamily ?? DEFAULT_FONT_FAMILY;
 
-  // Font size proportional to shape — fits nicely inside
-  const autoSize = Math.min(height * 0.3, width / (label.length * 0.6));
-  const fontSize = Math.max(8, Math.min(autoSize, 72));
+  // Use explicit fontSize if user has set one, otherwise auto-scale to shape
+  let fontSize: number;
+  if (style.fontSize) {
+    fontSize = style.fontSize;
+  } else {
+    const autoSize = Math.min(height * 0.3, width / (label.length * 0.6));
+    fontSize = Math.max(8, Math.min(autoSize, 72));
+  }
 
   ctx.font = `${fontSize}px ${fontFamily}`;
   ctx.textAlign = 'center';
