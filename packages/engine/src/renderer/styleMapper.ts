@@ -22,10 +22,11 @@ import type { Options } from 'roughjs/bin/core.js';
  * - `opacity` is NOT mapped (handled via `ctx.globalAlpha`)
  */
 export function mapStyleToRoughOptions(style: ExpressionStyle): Options {
+  const noFill = style.fillStyle === 'none' || style.backgroundColor === 'transparent';
   return {
     stroke: style.strokeColor,
-    fill: style.backgroundColor === 'transparent' ? undefined : style.backgroundColor,
-    fillStyle: style.fillStyle === 'none' ? undefined : style.fillStyle,
+    fill: noFill ? undefined : style.backgroundColor,
+    fillStyle: noFill ? undefined : style.fillStyle,
     strokeWidth: style.strokeWidth,
     roughness: style.roughness,
   };
