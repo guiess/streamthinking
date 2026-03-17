@@ -24,6 +24,7 @@ import {
   Type,
   Group,
   Ungroup,
+  Trash2,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -125,6 +126,7 @@ export function Toolbar() {
 
       {/* Group/Ungroup buttons — shown when 2+ expressions selected */}
       <GroupActions />
+      <SelectionActions />
     </div>
   );
 }
@@ -212,6 +214,45 @@ function GroupActions() {
           <Ungroup size={ICON_SIZE} />
         </button>
       )}
+    </>
+  );
+}
+
+/** Delete button — visible when 1+ expressions selected. */
+function SelectionActions() {
+  const selectedIds = useCanvasStore((s) => s.selectedIds);
+  const expressions = useCanvasStore((s) => s.expressions);
+  const deleteExpressions = useCanvasStore((s) => s.deleteExpressions);
+
+  if (selectedIds.size === 0) return null;
+
+  const handleDelete = () => {
+    const deletableIds = Array.from(selectedIds).filter(
+      (id) => !expressions[id]?.meta.locked,
+    );
+    if (deletableIds.length > 0) {
+      deleteExpressions(deletableIds);
+    }
+  };
+
+  return (
+    <>
+      <div style={{ width: '100%', height: 1, backgroundColor: '#e0e0e0', margin: '2px 0' }} />
+      <button
+        type="button"
+        title="Delete (Del)"
+        aria-label="Delete selected"
+        onClick={handleDelete}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          width: BUTTON_SIZE, height: BUTTON_SIZE,
+          border: 'none', borderRadius: 6, cursor: 'pointer',
+          backgroundColor: 'transparent',
+          color: '#e03131',
+        }}
+      >
+        <Trash2 size={ICON_SIZE} />
+      </button>
     </>
   );
 }
