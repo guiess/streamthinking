@@ -36,7 +36,7 @@ const STICKY_NOTE_PADDING = 12;
 const DEFAULT_FONT_SIZE = 16;
 
 /** Default font family when not specified. */
-const DEFAULT_FONT_FAMILY = 'sans-serif';
+const DEFAULT_FONT_FAMILY = 'Architects Daughter, cursive';
 
 /** Line height multiplier for text wrapping. */
 const LINE_HEIGHT_MULTIPLIER = 1.4;

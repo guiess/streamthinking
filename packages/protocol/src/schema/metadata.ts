@@ -44,4 +44,6 @@ export const DEFAULT_EXPRESSION_STYLE: ExpressionStyle = {
   strokeWidth: 2,
   roughness: 1,
   opacity: 1,
+  fontSize: 16,
+  fontFamily: 'Architects Daughter, cursive',
 };
