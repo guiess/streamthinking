@@ -302,16 +302,17 @@ export function StylePanel() {
       {/* ── Font Family ── */}
       <Section label="Font">
         <select
-          value={currentStyle.fontFamily ?? 'sans-serif'}
+          value={currentStyle.fontFamily ?? 'Architects Daughter, cursive'}
           onChange={(e) => applyStyle({ fontFamily: e.target.value })}
           style={{ width: '100%', padding: '4px', borderRadius: 4, border: '1px solid var(--border, #ccc)', backgroundColor: 'var(--bg-panel, #fff)', color: 'var(--text-primary, #333)' }}
         >
+          <option value="Architects Daughter, cursive">✏️ Architects Daughter</option>
+          <option value="Caveat, cursive">✏️ Caveat</option>
+          <option value="Patrick Hand, cursive">✏️ Patrick Hand</option>
+          <option value="Kalam, cursive">✏️ Kalam</option>
           <option value="sans-serif">Sans Serif</option>
           <option value="serif">Serif</option>
           <option value="monospace">Monospace</option>
-          <option value="Caveat, cursive">Handwriting</option>
-          <option value="Georgia, serif">Georgia</option>
-          <option value="Courier New, monospace">Courier</option>
         </select>
       </Section>
 
