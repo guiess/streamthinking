@@ -373,7 +373,7 @@ function InlineEditOverlay({ expression, initialText, camera, onCommit, onCancel
     // Match the renderer's auto-scale: 18% of height, capped by text width
     const { width, height } = expression.size;
     const labelLen = Math.max(currentLabel.length, 1);
-    const autoSize = Math.min(height * 0.18, width / (labelLen * 0.6));
+    const autoSize = Math.min(height, width) * 0.15;
     baseFontSize = Math.max(8, Math.min(autoSize, 72));
   }
   const scaledFontSize = baseFontSize * camera.zoom;
