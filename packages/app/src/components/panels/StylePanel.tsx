@@ -11,6 +11,7 @@
  */
 
 import { useCanvasStore } from '@infinicanvas/engine';
+import { DEFAULT_EXPRESSION_STYLE } from '@infinicanvas/protocol';
 import type { ExpressionStyle } from '@infinicanvas/protocol';
 
 // ── Color palette ──────────────────────────────────────────
@@ -153,7 +154,12 @@ export function StylePanel() {
   // In selection mode, bail if expression not found
   if (!isDrawingMode && !firstExpr) return null;
 
-  const currentStyle = isDrawingMode ? lastUsedStyle : firstExpr!.style;
+  const rawStyle = isDrawingMode ? lastUsedStyle : firstExpr!.style;
+  // Merge with defaults so optional fields (fontFamily, fontSize) have values
+  const currentStyle: ExpressionStyle = {
+    ...DEFAULT_EXPRESSION_STYLE,
+    ...rawStyle,
+  };
 
   /** Apply a partial style — routes to correct handler per mode. */
   function applyStyle(style: Partial<ExpressionStyle>) {
@@ -302,7 +308,7 @@ export function StylePanel() {
       {/* ── Font Family ── */}
       <Section label="Font">
         <select
-          value={currentStyle.fontFamily ?? 'Architects Daughter, cursive'}
+          value={currentStyle.fontFamily}
           onChange={(e) => applyStyle({ fontFamily: e.target.value })}
           style={{ width: '100%', padding: '4px', borderRadius: 4, border: '1px solid var(--border, #ccc)', backgroundColor: 'var(--bg-panel, #fff)', color: 'var(--text-primary, #333)' }}
         >
