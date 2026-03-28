@@ -13,6 +13,9 @@ import { X } from 'lucide-react';
 /** localStorage key for settings. */
 export const SETTINGS_STORAGE_KEY = 'infinicanvas:settings';
 
+/** Custom event dispatched on same-tab settings save. */
+export const SETTINGS_CHANGED_EVENT = 'infinicanvas:settings-changed';
+
 /** Settings shape stored in localStorage. */
 export interface AppSettings {
   gatewayUrl: string;
@@ -52,6 +55,8 @@ function loadSettings(): AppSettings {
 function saveSettings(settings: AppSettings): void {
   try {
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+    // Dispatch custom event for same-tab listeners (storage event only fires cross-tab)
+    window.dispatchEvent(new CustomEvent(SETTINGS_CHANGED_EVENT));
   } catch {
     // localStorage unavailable — silently continue
   }

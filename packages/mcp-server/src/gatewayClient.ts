@@ -165,20 +165,43 @@ export class GatewayClient implements IGatewayClient {
     this.author = MCP_AUTHOR;
   }
 
+  /** Timeout (ms) for the initial gateway handshake. */
+  private static readonly CONNECT_TIMEOUT_MS = 10_000;
+
   async connect(): Promise<void> {
     return new Promise((resolve, reject) => {
+      let settled = false;
+
+      const settle = (fn: (v?: unknown) => void, value?: unknown) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        fn(value);
+      };
+
       this.ws = new WebSocket(this.url);
 
+      const timeout = setTimeout(() => {
+        this.ws?.close();
+        settle(reject, new Error('Gateway connection timed out (10s)'));
+      }, GatewayClient.CONNECT_TIMEOUT_MS);
+
       const onError = (err: Error) => {
-        this.ws?.removeListener('error', onError);
-        reject(new Error(`Gateway connection failed: ${err.message}`));
+        settle(reject, new Error(`Gateway connection failed: ${err.message}`));
       };
 
       this.ws.on('error', onError);
 
+      this.ws.on('close', () => {
+        settle(reject, new Error('Connection closed before session established'));
+      });
+
       this.ws.on('open', () => {
         this.ws?.removeListener('error', onError);
-        this.setupMessageHandler(resolve, reject);
+        this.setupMessageHandler(
+          () => settle(resolve),
+          (err) => settle(reject, err),
+        );
 
         if (this.initialSessionId) {
           this.send({

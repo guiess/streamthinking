@@ -219,9 +219,28 @@ function handleMessage(
         return;
       }
 
-      // Validate required fields.
+      // Rate limiting (same as operations).
+      if (!rateLimiter.allow(ws)) {
+        sendError(ws, 'RATE_LIMITED', 'Too many requests — slow down');
+        return;
+      }
+
+      // Validate required top-level fields.
       if (!message.requestId || !message.action || !message.context || !message.prompt) {
         sendError(ws, 'INVALID_AGENT_REQUEST', 'agent-request requires requestId, action, context, and prompt');
+        return;
+      }
+
+      // Validate action against allowed values.
+      const ALLOWED_ACTIONS = ['explain', 'extend', 'diagram'];
+      if (!ALLOWED_ACTIONS.includes(message.action)) {
+        sendError(ws, 'INVALID_AGENT_REQUEST', `action must be one of: ${ALLOWED_ACTIONS.join(', ')}`);
+        return;
+      }
+
+      // Validate context structure.
+      if (!Array.isArray(message.context.expressions) || !message.context.suggestedPosition) {
+        sendError(ws, 'INVALID_AGENT_REQUEST', 'context must include expressions array and suggestedPosition');
         return;
       }
 
@@ -231,7 +250,8 @@ function handleMessage(
         return;
       }
 
-      log('agent_request', { sessionId, requestId: message.requestId, action: message.action });
+      const safeAction = String(message.action).slice(0, 50);
+      log('agent_request', { sessionId, requestId: message.requestId, action: safeAction });
 
       // Relay to all other clients (MCP server, other agents) — gateway is just a relay.
       broadcastToOthers(session, ws, {

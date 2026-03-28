@@ -14,7 +14,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createGatewayConnection } from '@infinicanvas/engine';
 import type { GatewayConnection } from '@infinicanvas/engine';
-import { SETTINGS_STORAGE_KEY } from '../components/panels/SettingsPanel.js';
+import { SETTINGS_STORAGE_KEY, SETTINGS_CHANGED_EVENT } from '../components/panels/SettingsPanel.js';
 import type { AppSettings } from '../components/panels/SettingsPanel.js';
 
 // ── Types ──────────────────────────────────────────────────
@@ -126,17 +126,24 @@ export function useGatewayConnection(): GatewayConnectionState {
   useEffect(() => {
     syncConnection();
 
-    /** React to settings changes from other tabs or SettingsPanel saves. */
+    /** React to settings changes from other tabs. */
     function handleStorageChange(event: StorageEvent): void {
       if (event.key === SETTINGS_STORAGE_KEY || event.key === null) {
         syncConnection();
       }
     }
 
+    /** React to settings changes from same tab (SettingsPanel save). */
+    function handleSettingsChanged(): void {
+      syncConnection();
+    }
+
     window.addEventListener('storage', handleStorageChange);
+    window.addEventListener(SETTINGS_CHANGED_EVENT, handleSettingsChanged);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener(SETTINGS_CHANGED_EVENT, handleSettingsChanged);
       // Cleanup connection on unmount
       if (connectionRef.current) {
         connectionRef.current.disconnect();
