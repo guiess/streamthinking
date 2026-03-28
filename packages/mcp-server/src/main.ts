@@ -61,6 +61,20 @@ export async function startServer(
     if (clientInfo && gatewayClient.isConnected()) {
       const agentName = clientInfo.name || 'Unknown CLI';
       gatewayClient.updateAgentName(agentName);
+    } else if (!clientInfo) {
+      // clientInfo may not be available yet if connect() returns before init completes.
+      // Poll briefly for it.
+      let attempts = 0;
+      const poll = setInterval(() => {
+        attempts++;
+        const info = mcpServer.server.getClientVersion();
+        if (info && gatewayClient.isConnected()) {
+          clearInterval(poll);
+          gatewayClient.updateAgentName(info.name || 'Unknown CLI');
+        } else if (attempts >= 20) {
+          clearInterval(poll);
+        }
+      }, 250);
     }
   }
 
