@@ -259,6 +259,14 @@ export function createGatewayConnection(
           message.expressions,
           message.expressionOrder,
         );
+        // Load agents already registered in the session
+        if (message.agents && Array.isArray(message.agents)) {
+          const agentStore = useAgentStore.getState();
+          agentStore.clearAgents();
+          for (const agent of message.agents) {
+            agentStore.addAgent(agent);
+          }
+        }
         // Reset log tracking since state was replaced
         lastLogLength = 0;
         break;

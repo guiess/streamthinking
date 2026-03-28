@@ -170,6 +170,7 @@ function handleMessage(
         sessionId: message.sessionId,
         expressions: state.expressions,
         expressionOrder: state.expressionOrder,
+        agents: state.agents,
       });
       break;
     }

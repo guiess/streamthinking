@@ -12,7 +12,7 @@
 
 import type { WebSocket } from 'ws';
 import { nanoid } from 'nanoid';
-import type { VisualExpression } from '@infinicanvas/protocol';
+import type { VisualExpression, AuthorInfo } from '@infinicanvas/protocol';
 import type { Session } from './types.js';
 import { log } from './logger.js';
 
@@ -78,7 +78,7 @@ export class SessionManager {
   joinSession(
     sessionId: string,
     ws: WebSocket,
-  ): { expressions: VisualExpression[]; expressionOrder: string[] } | undefined {
+  ): { expressions: VisualExpression[]; expressionOrder: string[]; agents: AuthorInfo[] } | undefined {
     const session = this.sessions.get(sessionId);
     if (!session) return undefined;
 
@@ -94,6 +94,7 @@ export class SessionManager {
     return {
       expressions,
       expressionOrder: session.expressionOrder,
+      agents: [...session.agents.values()],
     };
   }
 
