@@ -16,6 +16,7 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { createMcpServer } from './server.js';
 import { createGatewayClient, type IGatewayClient } from './gatewayClient.js';
+import { MCP_AUTHOR } from './defaults.js';
 
 /** Options for starting the MCP server programmatically. */
 export interface StartServerOptions {
@@ -57,9 +58,10 @@ export async function startServer(
     await mcpServer.connect(transport);
 
     // After MCP init handshake, update agent name with CLI client info
+    const shortId = MCP_AUTHOR.id.slice(-4);
     const clientInfo = mcpServer.server.getClientVersion();
     if (clientInfo && gatewayClient.isConnected()) {
-      const agentName = clientInfo.name || 'Unknown CLI';
+      const agentName = `${clientInfo.name} (${shortId})`;
       gatewayClient.updateAgentName(agentName);
     } else if (!clientInfo) {
       // clientInfo may not be available yet if connect() returns before init completes.
@@ -70,7 +72,7 @@ export async function startServer(
         const info = mcpServer.server.getClientVersion();
         if (info && gatewayClient.isConnected()) {
           clearInterval(poll);
-          gatewayClient.updateAgentName(info.name || 'Unknown CLI');
+          gatewayClient.updateAgentName(`${info.name} (${shortId})`);
         } else if (attempts >= 20) {
           clearInterval(poll);
         }
