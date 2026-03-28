@@ -9,6 +9,7 @@
 
 import { DEFAULT_EXPRESSION_STYLE } from '@infinicanvas/protocol';
 import type { ExpressionStyle } from '@infinicanvas/protocol';
+import { nanoid } from 'nanoid';
 
 /**
  * Default visual style for canvas expressions.
@@ -58,7 +59,7 @@ export const LAYOUT = {
 /** MCP server author info — identifies operations as coming from the MCP tool server. */
 export const MCP_AUTHOR = {
   type: 'agent' as const,
-  id: 'mcp-server',
-  name: 'InfiniCanvas MCP',
+  id: `mcp-${nanoid(6)}`,
+  name: `Copilot MCP (${nanoid(4)})`,
   provider: 'mcp',
 };

@@ -84,7 +84,14 @@ export type ClientMessage =
   | JoinMessage
   | OperationMessage
   | LeaveMessage
-  | AgentRequestMessage;
+  | AgentRequestMessage
+  | IdentifyMessage;
+
+/** Client identifies itself as an agent (sent after joining a session). */
+export interface IdentifyMessage {
+  type: 'identify';
+  agent: AuthorInfo;
+}
 
 // ── Server → Client Messages ──────────────────────────────
 

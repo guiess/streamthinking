@@ -232,6 +232,14 @@ export class GatewayClient implements IGatewayClient {
     return this.ws?.readyState === WebSocket.OPEN;
   }
 
+  /** Send identify message to register this agent in the session immediately. */
+  private sendIdentify(): void {
+    this.send({
+      type: 'identify',
+      agent: this.author,
+    });
+  }
+
   getSessionId(): string | null {
     return this.sessionId;
   }
@@ -328,6 +336,7 @@ export class GatewayClient implements IGatewayClient {
       switch (msg.type) {
         case 'session-created':
           this.sessionId = msg.sessionId;
+          this.sendIdentify();
           if (!settled) {
             settled = true;
             onReady();
@@ -337,6 +346,7 @@ export class GatewayClient implements IGatewayClient {
         case 'state-sync':
           this.sessionId = msg.sessionId;
           this.expressions = msg.expressions;
+          this.sendIdentify();
           if (!settled) {
             settled = true;
             onReady();

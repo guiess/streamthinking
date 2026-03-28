@@ -577,11 +577,8 @@ describe('composite tools cross-cutting', () => {
   it('each expression has MCP author info', () => {
     const expr = buildFlowchart({ title: 'T', nodes: [{ id: 'n', label: 'N' }], edges: [] });
 
-    expect(expr.meta.author).toEqual({
-      type: 'agent',
-      id: 'mcp-server',
-      name: 'InfiniCanvas MCP',
-      provider: 'mcp',
-    });
+    expect(expr.meta.author.type).toBe('agent');
+    expect(expr.meta.author.id).toMatch(/^mcp-/);
+    expect(expr.meta.author.provider).toBe('mcp');
   });
 });

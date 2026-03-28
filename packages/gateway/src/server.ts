@@ -269,6 +269,36 @@ function handleMessage(
       break;
     }
 
+    case 'identify': {
+      const sessionId = clientSessions.get(ws);
+      if (!sessionId) {
+        sendError(ws, 'NOT_IN_SESSION', 'Join a session before identifying');
+        return;
+      }
+
+      if (!message.agent || !message.agent.id || !message.agent.name) {
+        sendError(ws, 'INVALID_IDENTIFY', 'identify requires agent with id and name');
+        return;
+      }
+
+      const session = sessionManager.getSession(sessionId);
+      if (!session) {
+        sendError(ws, 'SESSION_NOT_FOUND', 'Session no longer exists');
+        return;
+      }
+
+      const agentMsg = registerAgent(session, message.agent);
+      if (agentMsg) {
+        // Broadcast to ALL clients including sender so the browser sees it
+        for (const client of session.clients) {
+          if (client.readyState === client.OPEN) {
+            client.send(JSON.stringify(agentMsg));
+          }
+        }
+      }
+      break;
+    }
+
     case 'leave': {
       const sessionId = clientSessions.get(ws);
       if (sessionId) {

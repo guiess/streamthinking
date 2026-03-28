@@ -55,7 +55,7 @@ describe('buildRectangle', () => {
     expect(expr.id).toBeDefined();
     expect(expr.angle).toBe(0);
     expect(expr.meta.author.type).toBe('agent');
-    expect(expr.meta.author.id).toBe('mcp-server');
+    expect(expr.meta.author.id).toMatch(/^mcp-/);
     expect(expr.meta.locked).toBe(false);
   });
 
@@ -353,12 +353,9 @@ describe('primitive tools cross-cutting', () => {
     ];
 
     for (const expr of expressions) {
-      expect(expr.meta.author).toEqual({
-        type: 'agent',
-        id: 'mcp-server',
-        name: 'InfiniCanvas MCP',
-        provider: 'mcp',
-      });
+      expect(expr.meta.author.type).toBe('agent');
+      expect(expr.meta.author.id).toMatch(/^mcp-/);
+      expect(expr.meta.author.provider).toBe('mcp');
     }
   });
 
