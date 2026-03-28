@@ -22,7 +22,9 @@ import { ThemeToggle } from './components/panels/ThemeToggle.js';
 import { ExportMenu } from './components/panels/ExportMenu.js';
 import { ZoomControls } from './components/panels/ZoomControls.js';
 import { SettingsPanel } from './components/panels/SettingsPanel.js';
+import { ConnectionStatus } from './components/panels/ConnectionStatus.js';
 import { WelcomeScreen } from './components/WelcomeScreen.js';
+import { useGatewayConnection } from './hooks/useGatewayConnection.js';
 import { Settings } from 'lucide-react';
 
 export function App() {
@@ -31,6 +33,7 @@ export function App() {
   const expressions = useCanvasStore((s) => s.expressions);
   const selectedIds = useCanvasStore((s) => s.selectedIds);
   const [showSettings, setShowSettings] = useState(false);
+  const gatewayState = useGatewayConnection();
 
   /** Get the list of selected expressions. */
   const selectedExpressions: VisualExpression[] = Array.from(selectedIds)
@@ -106,6 +109,7 @@ export function App() {
       >
         <ThemeToggle />
         <ExportMenu />
+        <ConnectionStatus {...gatewayState} />
         <button
           type="button"
           aria-label="Settings"
