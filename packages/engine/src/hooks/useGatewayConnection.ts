@@ -40,6 +40,8 @@ export interface GatewayConnection {
   readonly agents: AuthorInfo[];
   /** Last error message, if any. */
   readonly error: string | null;
+  /** Send an arbitrary JSON message through the WebSocket. */
+  sendMessage: (message: Record<string, unknown>) => void;
   /** Cleanly close the connection. No reconnection after this. */
   disconnect: () => void;
 }
@@ -165,6 +167,11 @@ export function createGatewayConnection(
     },
     get error() {
       return lastError;
+    },
+    sendMessage: (message: Record<string, unknown>) => {
+      if (ws && ws.readyState === WebSocketImpl.OPEN) {
+        ws.send(JSON.stringify(message));
+      }
     },
     disconnect: () => {
       intentionalClose = true;

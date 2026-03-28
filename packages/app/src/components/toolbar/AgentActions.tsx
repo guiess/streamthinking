@@ -31,6 +31,8 @@ export interface AgentActionsProps {
   selectedExpressions: VisualExpression[];
   /** Callback when an action button is clicked. */
   onAction: (action: AgentActionType, expressions: VisualExpression[]) => void;
+  /** Whether an agent request is pending (shows loading state). */
+  isLoading?: boolean;
 }
 
 /** Action button definition. */
@@ -77,7 +79,7 @@ const ICON_SIZE = 14;
  * Renders only when expressions are selected. Shows context-aware
  * action buttons that emit events for the MCP server to handle.
  */
-export function AgentActions({ selectedExpressions, onAction }: AgentActionsProps) {
+export function AgentActions({ selectedExpressions, onAction, isLoading = false }: AgentActionsProps) {
   if (selectedExpressions.length === 0) {
     return null;
   }
@@ -107,41 +109,69 @@ export function AgentActions({ selectedExpressions, onAction }: AgentActionsProp
         fontFamily: 'system-ui, -apple-system, sans-serif',
       }}
     >
-      {availableActions.map((actionDef) => {
-        const Icon = actionDef.icon;
-        return (
-          <button
-            key={actionDef.action}
-            type="button"
-            aria-label={actionDef.label}
-            onClick={() => onAction(actionDef.action, selectedExpressions)}
+      {isLoading ? (
+        <span
+          data-testid="agent-actions-loading"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '6px 16px',
+            color: '#a0a0a0',
+            fontSize: 13,
+            fontFamily: 'inherit',
+            animation: 'pulse 1.5s ease-in-out infinite',
+          }}
+        >
+          <span
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '6px 12px',
-              border: 'none',
-              borderRadius: 6,
-              cursor: 'pointer',
-              backgroundColor: 'transparent',
-              color: '#e0e0e0',
-              fontSize: 13,
-              fontFamily: 'inherit',
-              whiteSpace: 'nowrap',
-              transition: 'background-color 0.1s',
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              backgroundColor: '#4fc3f7',
+              display: 'inline-block',
+              animation: 'pulse 1.5s ease-in-out infinite',
             }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.backgroundColor = '#333';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
-            }}
-          >
-            <Icon size={ICON_SIZE} />
-            <span>{actionDef.label}</span>
-          </button>
-        );
-      })}
+          />
+          Thinking…
+        </span>
+      ) : (
+        availableActions.map((actionDef) => {
+          const Icon = actionDef.icon;
+          return (
+            <button
+              key={actionDef.action}
+              type="button"
+              aria-label={actionDef.label}
+              onClick={() => onAction(actionDef.action, selectedExpressions)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '6px 12px',
+                border: 'none',
+                borderRadius: 6,
+                cursor: 'pointer',
+                backgroundColor: 'transparent',
+                color: '#e0e0e0',
+                fontSize: 13,
+                fontFamily: 'inherit',
+                whiteSpace: 'nowrap',
+                transition: 'background-color 0.1s',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.backgroundColor = '#333';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+              }}
+            >
+              <Icon size={ICON_SIZE} />
+              <span>{actionDef.label}</span>
+            </button>
+          );
+        })
+      )}
     </div>
   );
 }

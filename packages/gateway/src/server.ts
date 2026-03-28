@@ -212,6 +212,38 @@ function handleMessage(
       break;
     }
 
+    case 'agent-request': {
+      const sessionId = clientSessions.get(ws);
+      if (!sessionId) {
+        sendError(ws, 'NOT_IN_SESSION', 'Join a session before sending agent requests');
+        return;
+      }
+
+      // Validate required fields.
+      if (!message.requestId || !message.action || !message.context || !message.prompt) {
+        sendError(ws, 'INVALID_AGENT_REQUEST', 'agent-request requires requestId, action, context, and prompt');
+        return;
+      }
+
+      const session = sessionManager.getSession(sessionId);
+      if (!session) {
+        sendError(ws, 'SESSION_NOT_FOUND', 'Session no longer exists');
+        return;
+      }
+
+      log('agent_request', { sessionId, requestId: message.requestId, action: message.action });
+
+      // Relay to all other clients (MCP server, other agents) — gateway is just a relay.
+      broadcastToOthers(session, ws, {
+        type: 'agent-request',
+        requestId: message.requestId,
+        action: message.action,
+        context: message.context,
+        prompt: message.prompt,
+      });
+      break;
+    }
+
     case 'leave': {
       const sessionId = clientSessions.get(ws);
       if (sessionId) {

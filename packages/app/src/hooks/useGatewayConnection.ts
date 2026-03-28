@@ -29,6 +29,8 @@ export interface GatewayConnectionState {
   error: string | null;
   /** Whether both gatewayUrl and apiKey are configured. */
   hasSettings: boolean;
+  /** Send an arbitrary JSON message through the gateway WebSocket. */
+  sendMessage: (message: Record<string, unknown>) => void;
 }
 
 // ── Constants ──────────────────────────────────────────────
@@ -74,12 +76,16 @@ function loadSettings(): AppSettings | null {
  * - Cleans up on unmount
  */
 export function useGatewayConnection(): GatewayConnectionState {
+  /** No-op send for when connection is not available. */
+  const noopSend = useCallback((): void => {}, []);
+
   const connectionRef = useRef<GatewayConnection | null>(null);
   const [state, setState] = useState<GatewayConnectionState>({
     connected: false,
     sessionId: null,
     error: null,
     hasSettings: false,
+    sendMessage: noopSend,
   });
 
   /**
@@ -111,6 +117,7 @@ export function useGatewayConnection(): GatewayConnectionState {
       sessionId: conn?.sessionId ?? null,
       error: conn?.error ?? null,
       hasSettings,
+      sendMessage: conn?.sendMessage ?? noopSend,
     });
   }, []);
 
@@ -149,6 +156,7 @@ export function useGatewayConnection(): GatewayConnectionState {
           sessionId: conn?.sessionId ?? null,
           error: conn?.error ?? null,
           hasSettings: prev.hasSettings,
+          sendMessage: conn?.sendMessage ?? noopSend,
         };
 
         // Avoid unnecessary re-renders [YAGNI]

@@ -465,5 +465,47 @@ export function createMcpServer(gatewayClient: IGatewayClient): McpServer {
     },
   );
 
+  // ── Pending requests tool ─────────────────────────────
+
+  server.tool(
+    'canvas_pending_requests',
+    'Get pending action requests from the human user. Check this periodically to see if the user wants you to explain, extend, or diagram something on the canvas. Returns requests and clears the queue.',
+    {},
+    async () => {
+      const requests = gatewayClient.getPendingRequests();
+
+      if (requests.length === 0) {
+        return {
+          content: [{
+            type: 'text' as const,
+            text: 'No pending requests from the user.',
+          }],
+        };
+      }
+
+      const lines = requests.map((req, i) => {
+        const exprSummary = req.context.expressions
+          .map((e) => `${e.kind}${e.label ? ` "${e.label}"` : ''} (id: ${e.id})`)
+          .join(', ');
+
+        return [
+          `--- Request ${i + 1} ---`,
+          `Request ID: ${req.requestId}`,
+          `Action: ${req.action}`,
+          `Selected: ${exprSummary}`,
+          `Suggested position: (${req.context.suggestedPosition.x}, ${req.context.suggestedPosition.y})`,
+          `Prompt: ${req.prompt}`,
+        ].join('\n');
+      });
+
+      return {
+        content: [{
+          type: 'text' as const,
+          text: `${requests.length} pending request(s):\n\n${lines.join('\n\n')}`,
+        }],
+      };
+    },
+  );
+
   return server;
 }

@@ -52,11 +52,31 @@ interface ErrorMessage {
   message: string;
 }
 
+/** Inbound agent-request relayed by the gateway from a human client. */
+interface AgentRequestInbound {
+  type: 'agent-request';
+  requestId: string;
+  action: string;
+  context: {
+    expressions: Array<{
+      id: string;
+      kind: string;
+      label?: string;
+      position: { x: number; y: number };
+      size: { width: number; height: number };
+      data: unknown;
+    }>;
+    suggestedPosition: { x: number; y: number };
+  };
+  prompt: string;
+}
+
 type ServerMessage =
   | SessionCreatedMessage
   | StateSyncMessage
   | OperationBroadcast
-  | ErrorMessage;
+  | ErrorMessage
+  | AgentRequestInbound;
 
 /** Options for creating a gateway client. */
 export interface GatewayClientOptions {
@@ -66,6 +86,30 @@ export interface GatewayClientOptions {
   apiKey?: string;
   /** Existing session ID to join (creates new session if omitted). */
   sessionId?: string;
+}
+
+/** A pending action request from a human user. */
+export interface PendingAgentRequest {
+  /** Unique request identifier. */
+  requestId: string;
+  /** Action type: explain, extend, or diagram. */
+  action: string;
+  /** Human-readable prompt describing what the AI should do. */
+  prompt: string;
+  /** Context about selected expressions and suggested position. */
+  context: {
+    expressions: Array<{
+      id: string;
+      kind: string;
+      label?: string;
+      position: { x: number; y: number };
+      size: { width: number; height: number };
+      data: unknown;
+    }>;
+    suggestedPosition: { x: number; y: number };
+  };
+  /** Unix timestamp (ms) when the request was received. */
+  receivedAt: number;
 }
 
 /**
@@ -91,6 +135,8 @@ export interface IGatewayClient {
   sendStyle(expressionIds: string[], style: Partial<import('@infinicanvas/protocol').ExpressionStyle>): Promise<void>;
   /** Get the current canvas state (expressions). */
   getState(): VisualExpression[];
+  /** Get and clear all pending agent requests from human users. */
+  getPendingRequests(): PendingAgentRequest[];
 }
 
 /**
@@ -103,10 +149,14 @@ export class GatewayClient implements IGatewayClient {
   private ws: WebSocket | null = null;
   private sessionId: string | null = null;
   private expressions: VisualExpression[] = [];
+  private pendingRequests: PendingAgentRequest[] = [];
   private readonly url: string;
   private readonly apiKey: string;
   private readonly initialSessionId: string | undefined;
   private readonly author: AuthorInfo;
+
+  /** Maximum pending requests to queue (prevents unbounded growth). */
+  private static readonly MAX_PENDING_REQUESTS = 50;
 
   constructor(options: GatewayClientOptions = {}) {
     this.url = options.url ?? process.env['INFINICANVAS_GATEWAY_URL'] ?? 'ws://localhost:8080';
@@ -229,6 +279,12 @@ export class GatewayClient implements IGatewayClient {
     return [...this.expressions];
   }
 
+  getPendingRequests(): PendingAgentRequest[] {
+    const requests = [...this.pendingRequests];
+    this.pendingRequests = [];
+    return requests;
+  }
+
   // ── Private helpers ──────────────────────────────────────
 
   private setupMessageHandler(
@@ -266,6 +322,10 @@ export class GatewayClient implements IGatewayClient {
 
         case 'operation':
           this.applyRemoteOperation(msg.operation);
+          break;
+
+        case 'agent-request':
+          this.enqueueAgentRequest(msg);
           break;
 
         case 'error':
@@ -372,6 +432,22 @@ export class GatewayClient implements IGatewayClient {
         // Other operation types are broadcast-only and don't affect local state
         break;
     }
+  }
+
+  /** Queue an inbound agent-request for retrieval by the pending requests tool. */
+  private enqueueAgentRequest(msg: AgentRequestInbound): void {
+    // Enforce queue size limit — drop oldest if full.
+    if (this.pendingRequests.length >= GatewayClient.MAX_PENDING_REQUESTS) {
+      this.pendingRequests.shift();
+    }
+
+    this.pendingRequests.push({
+      requestId: msg.requestId,
+      action: msg.action,
+      prompt: msg.prompt,
+      context: msg.context,
+      receivedAt: Date.now(),
+    });
   }
 
   private async sendOperation(

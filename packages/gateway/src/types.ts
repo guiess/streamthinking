@@ -56,11 +56,35 @@ export interface LeaveMessage {
   type: 'leave';
 }
 
+/** Human user requesting an AI agent action on selected expressions. */
+export interface AgentRequestMessage {
+  type: 'agent-request';
+  /** Unique request identifier for tracking. */
+  requestId: string;
+  /** Action requested: explain, extend, or diagram. */
+  action: string;
+  /** Context about selected expressions and suggested placement. */
+  context: {
+    expressions: Array<{
+      id: string;
+      kind: string;
+      label?: string;
+      position: { x: number; y: number };
+      size: { width: number; height: number };
+      data: unknown;
+    }>;
+    suggestedPosition: { x: number; y: number };
+  };
+  /** Human-readable prompt describing what the AI should do. */
+  prompt: string;
+}
+
 export type ClientMessage =
   | CreateSessionMessage
   | JoinMessage
   | OperationMessage
-  | LeaveMessage;
+  | LeaveMessage
+  | AgentRequestMessage;
 
 // ── Server → Client Messages ──────────────────────────────
 
