@@ -23,7 +23,8 @@ export function registerAgent(
 ): AgentJoinedMessage | null {
   if (author.type !== 'agent') return null;
 
-  if (session.agents.has(author.id)) return null;
+  const existing = session.agents.get(author.id);
+  if (existing && existing.name === author.name) return null;
 
   session.agents.set(author.id, author);
   log('agent_registered', { sessionId: session.id, agentId: author.id, agentName: author.name });
