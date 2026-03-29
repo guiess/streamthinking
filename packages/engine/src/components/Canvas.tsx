@@ -379,12 +379,13 @@ function TextEditor({ expression, initialText, camera, editorTextRef, onCommit, 
     const textarea = textareaRef.current;
     if (textarea) {
       textarea.focus();
-      // Place cursor at end (preserves initial char from type-to-edit)
       const len = textarea.value.length;
       textarea.setSelectionRange(len, len);
-      // Auto-size to existing content on mount
-      textarea.style.height = 'auto';
-      textarea.style.height = `${Math.min(textarea.scrollHeight, Math.max(screenHeight, 24))}px`;
+      // For middle-aligned (shape labels), don't auto-resize — let flexbox center
+      if (verticalAlign !== 'middle') {
+        textarea.style.height = 'auto';
+        textarea.style.height = `${Math.min(textarea.scrollHeight, Math.max(screenHeight, 24))}px`;
+      }
     }
   }, []);
 
