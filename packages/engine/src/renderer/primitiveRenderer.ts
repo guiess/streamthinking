@@ -679,7 +679,8 @@ function renderStencil(
   // Draw label below the icon if present
   if (label) {
     const fontFamily = expr.style.fontFamily ?? DEFAULT_FONT_FAMILY;
-    ctx.font = `${STENCIL_LABEL_FONT_SIZE}px ${fontFamily}`;
+    const fontSize = expr.style.fontSize ?? STENCIL_LABEL_FONT_SIZE;
+    ctx.font = `${fontSize}px ${fontFamily}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.fillStyle = expr.style.strokeColor;
