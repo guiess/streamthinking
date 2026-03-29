@@ -361,6 +361,9 @@ function TextEditor({ expression, initialText, camera, onCommit, onCancel }: Tex
       // Place cursor at end (preserves initial char from type-to-edit)
       const len = textarea.value.length;
       textarea.setSelectionRange(len, len);
+      // Auto-size to existing content on mount
+      textarea.style.height = 'auto';
+      textarea.style.height = `${Math.min(textarea.scrollHeight, Math.max(screenHeight, 24))}px`;
     }
   }, []);
 
