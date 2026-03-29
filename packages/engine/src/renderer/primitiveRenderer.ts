@@ -580,13 +580,10 @@ function renderStencil(
       ctx.fillStyle = bgColor;
       ctx.fill();
     } else {
-      // hachure / cross-hatch — tint + sketchy diagonal lines, all clipped
+      // hachure / cross-hatch — diagonal lines only, no background fill (matches Rough.js)
       const roughness = expr.style.roughness ?? 1;
-      ctx.fillStyle = bgColor;
-      ctx.globalAlpha = opacity * 0.15;
-      ctx.fillRect(x, y, width, height);
 
-      ctx.globalAlpha = opacity * 0.4;
+      ctx.globalAlpha = opacity * 0.6;
       ctx.strokeStyle = bgColor;
       ctx.lineWidth = 1.5;
 
