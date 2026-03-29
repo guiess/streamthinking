@@ -211,13 +211,17 @@ function resolveShapeLabelKind(expr: VisualExpression): TextConfig {
 function resolveStencilKind(expr: VisualExpression): TextConfig {
   const data = expr.data as { label?: string };
   const fontFamily = expr.style.fontFamily ?? DEFAULT_FONT_FAMILY;
-  const fontSize = expr.style.fontSize ?? STENCIL_LABEL_FONT_SIZE;
+  // Scale font proportionally with stencil size (base: 12px at 44px icon)
+  const baseSize = expr.style.fontSize ?? STENCIL_LABEL_FONT_SIZE;
+  const scaleFactor = Math.min(expr.size.width, expr.size.height) / 44;
+  const fontSize = Math.round(baseSize * scaleFactor);
+  const gap = STENCIL_LABEL_GAP * scaleFactor;
 
   return {
     text: data.label ?? '',
     field: 'label',
     worldX: expr.position.x,
-    worldY: expr.position.y + expr.size.height + STENCIL_LABEL_GAP,
+    worldY: expr.position.y + expr.size.height + gap,
     worldWidth: expr.size.width,
     worldHeight: fontSize * 1.4, // Single line height
     fontSize,
