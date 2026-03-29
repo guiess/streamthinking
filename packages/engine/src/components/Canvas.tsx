@@ -422,7 +422,7 @@ function TextEditor({ expression, initialText, camera, onCommit, onCancel }: Tex
           defaultValue={initialText}
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
-          rows={1}
+          onContextMenu={(e) => { e.preventDefault(); doCommit(); }}
           onInput={(e) => {
             // Auto-resize height to content so flexbox centers properly
             const el = e.currentTarget;
@@ -460,6 +460,7 @@ function TextEditor({ expression, initialText, camera, onCommit, onCancel }: Tex
       defaultValue={initialText}
       onKeyDown={handleKeyDown}
       onBlur={handleBlur}
+      onContextMenu={(e) => { e.preventDefault(); doCommit(); }}
       style={{
         position: 'absolute',
         left: `${screenPos.x}px`,
