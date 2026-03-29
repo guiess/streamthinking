@@ -139,12 +139,19 @@ export class TextTool implements ToolHandler {
   private createTextExpression(worldX: number, worldY: number): string {
     const now = Date.now();
     const id = nanoid();
+    const { camera } = useCanvasStore.getState();
+
+    // Scale size and font inversely by zoom so text appears consistent on screen
+    const zoom = camera.zoom;
+    const w = TEXT_WIDTH / zoom;
+    const h = TEXT_HEIGHT / zoom;
+    const fontSize = Math.round(DEFAULT_FONT_SIZE / zoom);
 
     const expression: VisualExpression = {
       id,
       kind: 'text',
       position: { x: worldX, y: worldY },
-      size: { width: TEXT_WIDTH, height: TEXT_HEIGHT },
+      size: { width: w, height: h },
       angle: 0,
       style: { ...useCanvasStore.getState().lastUsedStyle },
       meta: {
@@ -157,7 +164,7 @@ export class TextTool implements ToolHandler {
       data: {
         kind: 'text',
         text: '',
-        fontSize: DEFAULT_FONT_SIZE,
+        fontSize,
         fontFamily: DEFAULT_FONT_FAMILY,
         textAlign: DEFAULT_TEXT_ALIGN,
       },
