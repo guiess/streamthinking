@@ -288,8 +288,12 @@ export function createGatewayConnection(
 
       case 'state-sync': {
         currentSessionId = message.sessionId;
+        // Gateway sends expressions as Record<id, expr>; replaceState expects array
+        const exprs = Array.isArray(message.expressions)
+          ? message.expressions
+          : Object.values(message.expressions);
         useCanvasStore.getState().replaceState(
-          message.expressions,
+          exprs,
           message.expressionOrder,
         );
         // Restore waypoints from the gateway session
