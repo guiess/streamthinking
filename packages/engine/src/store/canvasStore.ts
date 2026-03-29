@@ -240,6 +240,25 @@ function updateBoundArrows(
         if (px > maxX) maxX = px;
         if (py > maxY) maxY = py;
       }
+
+      // Self-loop: expand bbox to include the bezier curve's control points
+      const isSelfLoop = data.startBinding && data.endBinding &&
+        data.startBinding.expressionId === data.endBinding.expressionId;
+      if (isSelfLoop && startTarget) {
+        const loopSize = Math.max(startTarget.size.width, startTarget.size.height) * 0.7;
+        const midX = (points[0]![0] + points[points.length - 1]![0]) / 2;
+        const midY = (points[0]![1] + points[points.length - 1]![1]) / 2;
+        const cx = startTarget.position.x + startTarget.size.width / 2;
+        const cy = startTarget.position.y + startTarget.size.height / 2;
+        const dist = Math.hypot(midX - cx, midY - cy) || 1;
+        const cpX = midX + ((midX - cx) / dist) * loopSize;
+        const cpY = midY + ((midY - cy) / dist) * loopSize;
+        if (cpX < minX) minX = cpX;
+        if (cpY < minY) minY = cpY;
+        if (cpX > maxX) maxX = cpX;
+        if (cpY > maxY) maxY = cpY;
+      }
+
       arrow.position = { x: minX, y: minY };
       arrow.size = {
         width: Math.max(maxX - minX, 1),
