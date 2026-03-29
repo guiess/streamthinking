@@ -272,8 +272,8 @@ function updateBoundArrows(
 
       arrow.position = { x: minX, y: minY };
       arrow.size = {
-        width: Math.max(maxX - minX, 20),
-        height: Math.max(maxY - minY, 20),
+        width: Math.max(maxX - minX, 1),
+        height: Math.max(maxY - minY, 1),
       };
     }
   }
