@@ -186,7 +186,6 @@ function updateBoundArrows(
 
     const arrowIds = findBoundArrows(targetId, state.expressions);
     for (const arrowId of arrowIds) {
-      if (movedIds.has(arrowId)) continue;
       if (processedArrows.has(arrowId)) continue;
       processedArrows.add(arrowId);
 
@@ -809,19 +808,33 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
       historyManager.pushSnapshot(snapshot);
 
       set((state) => {
+        const movedIds = new Set(moves.map((m) => m.id));
+
         for (const move of moves) {
           const expr = state.expressions[move.id];
           if (expr) {
             expr.position = { ...move.to };
             // Translate data.points for point-based shapes [#74]
+            // Skip bound arrows whose shapes are also being moved —
+            // their endpoints will be recalculated by updateBoundArrows.
             const dx = move.to.x - move.from.x;
             const dy = move.to.y - move.from.y;
-            translateExpressionPoints(expr, dx, dy);
+            if (expr.kind === 'arrow' && expr.data.kind === 'arrow') {
+              const data = expr.data as { startBinding?: { expressionId: string }; endBinding?: { expressionId: string } };
+              const startBound = data.startBinding && movedIds.has(data.startBinding.expressionId);
+              const endBound = data.endBinding && movedIds.has(data.endBinding.expressionId);
+              if (!startBound && !endBound) {
+                // Arrow not bound to any moved shape — translate + detach normally
+                translateExpressionPoints(expr, dx, dy);
+              }
+              // Bound arrow: skip translate, let updateBoundArrows handle it
+            } else {
+              translateExpressionPoints(expr, dx, dy);
+            }
           }
         }
 
         // Update arrows bound to the moved shapes
-        const movedIds = new Set(moves.map((m) => m.id));
         updateBoundArrows(state, movedIds);
 
         // Re-snap moved arrows to nearby shapes

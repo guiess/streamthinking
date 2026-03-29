@@ -84,14 +84,14 @@ export function findExpressionsInMarquee(
     const exprRight = x + width;
     const exprBottom = y + height;
 
-    // AABB intersection test
-    const intersects =
-      exprRight > mx &&
-      x < mRight &&
-      exprBottom > my &&
-      y < mBottom;
+    // Containment test — marquee must fully encompass the expression
+    const contained =
+      x >= mx &&
+      y >= my &&
+      exprRight <= mRight &&
+      exprBottom <= mBottom;
 
-    if (intersects) {
+    if (contained) {
       result.push(id);
     }
   }

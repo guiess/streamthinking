@@ -54,6 +54,9 @@ function CanvasInner() {
   const editingIdRef = useRef<string | null>(null);
   editingIdRef.current = inlineEditor.editingId;
 
+  // Shared ref so container-level handlers can read the textarea's current value
+  const editorTextRef = useRef<string>('');
+
   // Wire TextTool → inline editor so text tool creates expression + starts editing
   textTool.setStartEditing(inlineEditor.startEditing);
 
@@ -225,6 +228,13 @@ function CanvasInner() {
       ref={containerRef}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        // Commit any active inline edit (right-click should finalize text)
+        if (inlineEditor.editingId) {
+          inlineEditor.commitEdit(editorTextRef.current);
+        }
+      }}
       style={{
         width: '100vw',
         height: '100vh',
@@ -232,6 +242,8 @@ function CanvasInner() {
         margin: 0,
         padding: 0,
         position: 'relative',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
       }}
     >
       <canvas
@@ -248,6 +260,7 @@ function CanvasInner() {
           expression={editingExpr}
           initialText={inlineEditor.getEditingText()}
           camera={camera}
+          editorTextRef={editorTextRef}
           onCommit={(text) => {
             inlineEditor.commitEdit(text);
           }}
@@ -308,6 +321,7 @@ interface TextEditorProps {
   expression: VisualExpression;
   initialText: string;
   camera: { x: number; y: number; zoom: number };
+  editorTextRef: React.MutableRefObject<string>;
   onCommit: (text: string) => void;
   onCancel: () => void;
 }
@@ -324,9 +338,12 @@ interface TextEditorProps {
  * [DRY] One component, one code path for all text editing.
  * [CLEAN-CODE] Single Responsibility — renders textarea matching rendered text.
  */
-function TextEditor({ expression, initialText, camera, onCommit, onCancel }: TextEditorProps) {
+function TextEditor({ expression, initialText, camera, editorTextRef, onCommit, onCancel }: TextEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const committedRef = useRef(false);
+
+  // Keep editorTextRef in sync so container-level handlers can read current value
+  editorTextRef.current = initialText;
 
   const config = resolveTextConfig(expression);
 
@@ -424,8 +441,9 @@ function TextEditor({ expression, initialText, camera, onCommit, onCancel }: Tex
           onBlur={handleBlur}
           onContextMenu={(e) => { e.preventDefault(); doCommit(); }}
           onInput={(e) => {
-            // Auto-resize height to content so flexbox centers properly
             const el = e.currentTarget;
+            editorTextRef.current = el.value;
+            // Auto-resize height to content so flexbox centers properly
             el.style.height = 'auto';
             el.style.height = `${Math.min(el.scrollHeight, effectiveHeight)}px`;
           }}
@@ -446,7 +464,6 @@ function TextEditor({ expression, initialText, camera, onCommit, onCancel }: Tex
             overflow: 'hidden',
             lineHeight: 1.4,
             display: 'block',
-            lineHeight: 1.4,
           }}
         />
       </div>

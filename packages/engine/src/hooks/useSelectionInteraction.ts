@@ -18,6 +18,7 @@ import { useRef, useEffect, useCallback } from 'react';
 import { useCanvasStore } from '../store/canvasStore.js';
 import { screenToWorld } from '../camera.js';
 import { findExpressionAtPoint, findExpressionsInMarquee } from '../interaction/selectionManager.js';
+import { detectPointerTarget } from '../interaction/manipulationHelpers.js';
 
 /** Minimum drag distance (in screen pixels) to trigger marquee. */
 const DRAG_THRESHOLD = 5;
@@ -74,6 +75,13 @@ export function useSelectionInteraction(
     // Check if clicking on an already-selected shape — let manipulation hook handle it
     const camera = state.camera;
     const worldPoint = screenToWorld(e.offsetX, e.offsetY, camera);
+
+    // Bail out if clicking on a resize/point handle — manipulation hook handles those
+    const pointerTarget = detectPointerTarget(worldPoint, state.expressions, state.selectedIds, camera);
+    if (pointerTarget.kind === 'handle' || pointerTarget.kind === 'point-handle') {
+      return;
+    }
+
     const hitId = findExpressionAtPoint(
       worldPoint,
       state.expressions,

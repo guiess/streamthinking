@@ -183,13 +183,15 @@ export function useManipulationInteraction(
         }
 
         // Update bound arrows in real-time during drag
+        const processedArrows = new Set<string>();
         for (const targetId of movedIds) {
           const target = draft.expressions[targetId];
           if (!target) continue;
 
           const arrowIds = findBoundArrows(targetId, draft.expressions);
           for (const arrowId of arrowIds) {
-            if (movedIds.has(arrowId)) continue;
+            if (processedArrows.has(arrowId)) continue;
+            processedArrows.add(arrowId);
             const arrow = draft.expressions[arrowId];
             if (!arrow || arrow.data.kind !== 'arrow') continue;
 

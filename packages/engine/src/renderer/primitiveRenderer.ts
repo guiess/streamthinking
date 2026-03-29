@@ -196,11 +196,15 @@ function renderRectangle(
   const { width, height } = expr.size;
   const options = mapStyleToRoughOptions(expr.style);
 
+  // Draw at origin so position changes (drag) don't regenerate roughness
   const drawable = getOrCreateDrawable(expr, () =>
-    rc.rectangle(x, y, width, height, options),
+    rc.rectangle(0, 0, width, height, options),
   );
 
+  ctx.save();
+  ctx.translate(x, y);
   rc.draw(drawable);
+  ctx.restore();
 
   // Center label if present (skip when editing in-place)
   if (!skipLabel && expr.data.kind === 'rectangle' && expr.data.label) {
@@ -217,15 +221,17 @@ function renderEllipse(
 ): void {
   const { x, y } = expr.position;
   const { width, height } = expr.size;
-  const cx = x + width / 2;
-  const cy = y + height / 2;
   const options = mapStyleToRoughOptions(expr.style);
 
+  // Draw at origin so position changes (drag) don't regenerate roughness
   const drawable = getOrCreateDrawable(expr, () =>
-    rc.ellipse(cx, cy, width, height, options),
+    rc.ellipse(width / 2, height / 2, width, height, options),
   );
 
+  ctx.save();
+  ctx.translate(x, y);
   rc.draw(drawable);
+  ctx.restore();
 
   if (!skipLabel && expr.data.kind === 'ellipse' && expr.data.label) {
     renderLabel(ctx, expr.data.label, x, y, width, height, expr.style);
@@ -241,22 +247,24 @@ function renderDiamond(
 ): void {
   const { x, y } = expr.position;
   const { width, height } = expr.size;
-  const cx = x + width / 2;
-  const cy = y + height / 2;
   const options = mapStyleToRoughOptions(expr.style);
 
+  // Draw at origin so position changes (drag) don't regenerate roughness
   const points: [number, number][] = [
-    [cx, y],           // top
-    [x + width, cy],   // right
-    [cx, y + height],  // bottom
-    [x, cy],           // left
+    [width / 2, 0],       // top
+    [width, height / 2],  // right
+    [width / 2, height],  // bottom
+    [0, height / 2],      // left
   ];
 
   const drawable = getOrCreateDrawable(expr, () =>
     rc.polygon(points, options),
   );
 
+  ctx.save();
+  ctx.translate(x, y);
   rc.draw(drawable);
+  ctx.restore();
 
   if (!skipLabel && expr.data.kind === 'diamond' && expr.data.label) {
     renderLabel(ctx, expr.data.label, x, y, width, height, expr.style);
@@ -301,11 +309,15 @@ function renderArrow(
   const data = expr.data as ArrowData;
   const { startArrowhead, endArrowhead } = data;
   const options = mapStyleToRoughOptions(expr.style);
-  const offset = computePositionOffset(expr);
 
   // Resolve binding positions for connected arrows
   const points = resolveBindings(expr, expressions);
   if (points.length < 2) return;
+
+  // Skip position offset for bound arrows — resolveBindings returns absolute
+  // world coordinates, so applying an offset would double-shift the arrow.
+  const hasBound = data.startBinding || data.endBinding;
+  const offset = hasBound ? { x: 0, y: 0 } : computePositionOffset(expr);
 
   if (offset.x !== 0 || offset.y !== 0) {
     ctx.save();
@@ -664,7 +676,10 @@ function renderStencil(
   if (img) {
     ctx.save();
     ctx.globalAlpha = opacity;
-    ctx.drawImage(img, x, y, width, height);
+    // Expand SVG drawing to compensate for internal viewBox padding,
+    // making the visible icon fill the bounding box more tightly.
+    const inset = Math.min(width, height) * 0.12;
+    ctx.drawImage(img, x - inset, y - inset, width + 2 * inset, height + 2 * inset);
     ctx.restore();
   } else {
     // Loading placeholder
@@ -959,10 +974,12 @@ function getOrCreateDrawable(
   expr: VisualExpression,
   create: () => Drawable,
 ): Drawable {
-  // Exclude data from cache key for shape kinds — label changes shouldn't regenerate the shape
+  // Shapes are drawn at origin with ctx.translate — position shouldn't invalidate cache.
+  // Label changes also shouldn't regenerate the sketchy outline.
   const isShape = expr.kind === 'rectangle' || expr.kind === 'ellipse' || expr.kind === 'diamond';
   const cacheData = isShape ? undefined : expr.data;
-  const ctx = { style: expr.style, position: expr.position, size: expr.size, data: cacheData };
+  const cachePosition = isShape ? { x: 0, y: 0 } : expr.position;
+  const ctx = { style: expr.style, position: cachePosition, size: expr.size, data: cacheData };
   const cached = drawableCache.get(expr.id, ctx);
   if (cached) return cached;
 
