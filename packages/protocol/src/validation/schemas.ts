@@ -132,7 +132,7 @@ export const freehandDataSchema = z.object({
 
 export const textDataSchema = z.object({
   kind: z.literal('text'),
-  text: z.string().min(1).max(10_000),
+  text: z.string().max(10_000),
   fontSize: z.number().positive(),
   fontFamily: z.string().min(1).max(500),
   textAlign: z.enum(['left', 'center', 'right']),
