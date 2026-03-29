@@ -676,9 +676,10 @@ function renderStencil(
   if (img) {
     ctx.save();
     ctx.globalAlpha = opacity;
-    // Expand SVG drawing to compensate for internal viewBox padding,
-    // making the visible icon fill the bounding box more tightly.
-    const inset = Math.min(width, height) * 0.12;
+    // Small icons have SVG viewBox padding — expand to compensate.
+    // Container stencils (large boxes) are edge-to-edge, draw exact.
+    const isContainer = Math.min(width, height) > 80;
+    const inset = isContainer ? 0 : Math.min(width, height) * 0.12;
     ctx.drawImage(img, x - inset, y - inset, width + 2 * inset, height + 2 * inset);
     ctx.restore();
   } else {
