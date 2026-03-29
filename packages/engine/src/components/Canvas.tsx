@@ -265,11 +265,11 @@ function CanvasInner() {
           initialText={inlineEditor.getEditingText()}
           camera={camera}
           editorTextRef={editorTextRef}
-          onCommit={(text, fontSize) => {
+          onCommit={(text, shrunkFontSize) => {
             inlineEditor.commitEdit(text);
-            // Save auto-shrunk font size to the expression style
-            if (fontSize !== undefined && editingExpr) {
-              const worldFontSize = fontSize / camera.zoom;
+            // Only save font size if it was actually shrunk
+            if (shrunkFontSize !== undefined && editingExpr) {
+              const worldFontSize = shrunkFontSize / camera.zoom;
               useCanvasStore.getState().styleExpressions(
                 [editingExpr.id],
                 { fontSize: worldFontSize },
@@ -407,7 +407,10 @@ function TextEditor({ expression, initialText, camera, editorTextRef, onCommit, 
   const doCommit = () => {
     if (committedRef.current) return;
     committedRef.current = true;
-    onCommit(textareaRef.current?.value ?? '', currentFontSizeRef.current ?? undefined);
+    // Only report fontSize if it was shrunk below the original
+    const shrunk = (currentFontSizeRef.current !== null && currentFontSizeRef.current < scaledFontSize)
+      ? currentFontSizeRef.current : undefined;
+    onCommit(textareaRef.current?.value ?? '', shrunk);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
