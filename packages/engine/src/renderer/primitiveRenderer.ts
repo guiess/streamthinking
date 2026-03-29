@@ -558,20 +558,21 @@ function renderStencil(
 
   // Apply expression style colors to the SVG
   const strokeColor = expr.style.strokeColor ?? '#1e1e1e';
-  const bgColor = expr.style.backgroundColor ?? 'none';
+  const bgColor = expr.style.backgroundColor ?? 'transparent';
   const fillStyle = expr.style.fillStyle ?? 'hachure';
   const opacity = expr.style.opacity ?? 1;
   
   // Replace currentColor with the expression's stroke color
   let styledSvg = entry.svgContent.replace(/currentColor/g, strokeColor);
   
-  // If fill style is not 'none' and background color is set, inject a fill rect
-  const hasFill = fillStyle !== 'none' && bgColor !== 'none' && bgColor !== 'transparent' && bgColor !== '#00000000';
-  if (hasFill) {
+  // Determine background: if user set a fill color, use it; otherwise white for solid/hachure
+  const isTransparent = bgColor === 'transparent' || bgColor === 'none' || bgColor === '#00000000';
+  if (fillStyle !== 'none') {
+    const effectiveBg = isTransparent ? '#ffffff' : bgColor;
     const fillOpacity = fillStyle === 'solid' ? '1' : '0.4';
     styledSvg = styledSvg.replace(
       /(<svg[^>]*>)/,
-      `$1<rect width="100%" height="100%" fill="${bgColor}" rx="4" opacity="${fillOpacity}"/>`,
+      `$1<rect width="100%" height="100%" fill="${effectiveBg}" rx="4" opacity="${fillOpacity}"/>`,
     );
   }
 
