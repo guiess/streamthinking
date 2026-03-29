@@ -943,7 +943,10 @@ function getOrCreateDrawable(
   expr: VisualExpression,
   create: () => Drawable,
 ): Drawable {
-  const ctx = { style: expr.style, position: expr.position, size: expr.size, data: expr.data };
+  // Exclude data from cache key for shape kinds — label changes shouldn't regenerate the shape
+  const isShape = expr.kind === 'rectangle' || expr.kind === 'ellipse' || expr.kind === 'diamond';
+  const cacheData = isShape ? undefined : expr.data;
+  const ctx = { style: expr.style, position: expr.position, size: expr.size, data: cacheData };
   const cached = drawableCache.get(expr.id, ctx);
   if (cached) return cached;
 
