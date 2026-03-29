@@ -171,6 +171,7 @@ function handleMessage(
         expressions: state.expressions,
         expressionOrder: state.expressionOrder,
         agents: state.agents,
+        waypoints: state.waypoints,
       });
       break;
     }
@@ -306,6 +307,105 @@ function handleMessage(
         sessionManager.leaveSession(sessionId, ws);
         clientSessions.delete(ws);
         log('client_left_session', { sessionId });
+      }
+      break;
+    }
+
+    case 'waypoint-add': {
+      const sessionId = clientSessions.get(ws);
+      if (!sessionId) {
+        sendError(ws, 'NOT_IN_SESSION', 'Join a session before adding waypoints');
+        return;
+      }
+
+      if (!message.waypoint || typeof message.waypoint.x !== 'number' ||
+          typeof message.waypoint.y !== 'number' || typeof message.waypoint.zoom !== 'number') {
+        sendError(ws, 'INVALID_WAYPOINT', 'waypoint-add requires waypoint with x, y, zoom');
+        return;
+      }
+
+      const session = sessionManager.getSession(sessionId);
+      if (!session) {
+        sendError(ws, 'SESSION_NOT_FOUND', 'Session no longer exists');
+        return;
+      }
+
+      session.waypoints.push({
+        x: message.waypoint.x,
+        y: message.waypoint.y,
+        zoom: message.waypoint.zoom,
+        label: message.waypoint.label,
+      });
+      session.lastActivity = Date.now();
+
+      broadcastToOthers(session, ws, {
+        type: 'waypoint-add',
+        waypoint: message.waypoint,
+      });
+      break;
+    }
+
+    case 'waypoint-remove': {
+      const sessionId = clientSessions.get(ws);
+      if (!sessionId) {
+        sendError(ws, 'NOT_IN_SESSION', 'Join a session before removing waypoints');
+        return;
+      }
+
+      if (typeof message.index !== 'number') {
+        sendError(ws, 'INVALID_WAYPOINT', 'waypoint-remove requires numeric index');
+        return;
+      }
+
+      const session = sessionManager.getSession(sessionId);
+      if (!session) {
+        sendError(ws, 'SESSION_NOT_FOUND', 'Session no longer exists');
+        return;
+      }
+
+      if (message.index >= 0 && message.index < session.waypoints.length) {
+        session.waypoints.splice(message.index, 1);
+        session.lastActivity = Date.now();
+
+        broadcastToOthers(session, ws, {
+          type: 'waypoint-remove',
+          index: message.index,
+        });
+      }
+      break;
+    }
+
+    case 'waypoint-reorder': {
+      const sessionId = clientSessions.get(ws);
+      if (!sessionId) {
+        sendError(ws, 'NOT_IN_SESSION', 'Join a session before reordering waypoints');
+        return;
+      }
+
+      if (typeof message.fromIndex !== 'number' || typeof message.toIndex !== 'number') {
+        sendError(ws, 'INVALID_WAYPOINT', 'waypoint-reorder requires fromIndex and toIndex');
+        return;
+      }
+
+      const session = sessionManager.getSession(sessionId);
+      if (!session) {
+        sendError(ws, 'SESSION_NOT_FOUND', 'Session no longer exists');
+        return;
+      }
+
+      const { fromIndex, toIndex } = message;
+      if (fromIndex >= 0 && fromIndex < session.waypoints.length &&
+          toIndex >= 0 && toIndex < session.waypoints.length &&
+          fromIndex !== toIndex) {
+        const [moved] = session.waypoints.splice(fromIndex, 1);
+        session.waypoints.splice(toIndex, 0, moved!);
+        session.lastActivity = Date.now();
+
+        broadcastToOthers(session, ws, {
+          type: 'waypoint-reorder',
+          fromIndex,
+          toIndex,
+        });
       }
       break;
     }

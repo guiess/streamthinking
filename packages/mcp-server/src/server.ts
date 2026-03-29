@@ -65,6 +65,11 @@ import {
   executePlaceStencil,
   executeListStencils,
 } from './tools/stencilTools.js';
+import {
+  executeAddWaypoint,
+  executeListWaypoints,
+  executeRemoveWaypoint,
+} from './tools/waypointTools.js';
 
 // ── Zod schemas for tool parameters ────────────────────────
 
@@ -576,6 +581,42 @@ export function createMcpServer(gatewayClient: IGatewayClient): McpServer {
     },
     async (params) => ({
       content: [{ type: 'text' as const, text: executeListStencils(params) }],
+    }),
+  );
+
+  // ── Waypoint tools ───────────────────────────────────────
+
+  server.tool(
+    'canvas_add_waypoint',
+    'Add a camera waypoint (bookmark) to the canvas. Use to save camera positions for presentation mode navigation.',
+    {
+      x: z.number().describe('X position on the canvas'),
+      y: z.number().describe('Y position on the canvas'),
+      zoom: z.number().describe('Zoom level'),
+      label: z.string().optional().describe('Optional label for the waypoint'),
+    },
+    async (params) => ({
+      content: [{ type: 'text' as const, text: executeAddWaypoint(gatewayClient, params) }],
+    }),
+  );
+
+  server.tool(
+    'canvas_list_waypoints',
+    'List all camera waypoints in the current session. Returns saved camera positions for presentation mode.',
+    {},
+    async () => ({
+      content: [{ type: 'text' as const, text: executeListWaypoints(gatewayClient) }],
+    }),
+  );
+
+  server.tool(
+    'canvas_remove_waypoint',
+    'Remove a waypoint by its 1-based index. Use canvas_list_waypoints to see indices.',
+    {
+      index: z.number().min(1).describe('1-based index of the waypoint to remove'),
+    },
+    async (params) => ({
+      content: [{ type: 'text' as const, text: executeRemoveWaypoint(gatewayClient, params) }],
     }),
   );
 

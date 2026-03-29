@@ -166,6 +166,8 @@ export interface CanvasActions {
   updateWaypoint: (index: number, partial: Partial<CameraWaypoint>) => void;
   /** Remove a waypoint by index. */
   removeWaypoint: (index: number) => void;
+  /** Reorder waypoints by moving one from `fromIndex` to `toIndex`. */
+  reorderWaypoints: (fromIndex: number, toIndex: number) => void;
   /** Clear all waypoints and exit presentation mode. */
   clearWaypoints: () => void;
   /** Navigate to a specific waypoint by index. */

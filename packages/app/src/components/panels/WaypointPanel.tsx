@@ -22,6 +22,7 @@ import {
   ChevronRight,
   Navigation,
   Trash2,
+  GripVertical,
 } from 'lucide-react';
 
 // ── Constants ──────────────────────────────────────────────
@@ -55,6 +56,11 @@ export function WaypointPanel({ isOpen }: WaypointPanelProps) {
   const waypoints = useCanvasStore((s) => s.waypoints);
   const presentationIndex = useCanvasStore((s) => s.presentationIndex);
 
+  /** Currently dragged waypoint index (-1 = not dragging). */
+  const [dragIndex, setDragIndex] = useState(-1);
+  /** Current drop target index (-1 = none). */
+  const [dropTargetIndex, setDropTargetIndex] = useState(-1);
+
   const handleAddWaypoint = useCallback(() => {
     useCanvasStore.getState().addWaypoint();
   }, []);
@@ -77,6 +83,27 @@ export function WaypointPanel({ isOpen }: WaypointPanelProps) {
 
   const handleNext = useCallback(() => {
     useCanvasStore.getState().nextWaypoint();
+  }, []);
+
+  const handleDragStart = useCallback((index: number) => {
+    setDragIndex(index);
+  }, []);
+
+  const handleDragOver = useCallback((index: number) => {
+    setDropTargetIndex(index);
+  }, []);
+
+  const handleDrop = useCallback((toIndex: number) => {
+    if (dragIndex >= 0 && dragIndex !== toIndex) {
+      useCanvasStore.getState().reorderWaypoints(dragIndex, toIndex);
+    }
+    setDragIndex(-1);
+    setDropTargetIndex(-1);
+  }, [dragIndex]);
+
+  const handleDragEnd = useCallback(() => {
+    setDragIndex(-1);
+    setDropTargetIndex(-1);
   }, []);
 
   if (!isOpen) return null;
@@ -167,9 +194,15 @@ export function WaypointPanel({ isOpen }: WaypointPanelProps) {
               waypoint={wp}
               index={index}
               isActive={index === presentationIndex}
+              isDragging={index === dragIndex}
+              isDropTarget={index === dropTargetIndex && index !== dragIndex}
               onJump={handleJump}
               onRemove={handleRemove}
               onRename={handleRename}
+              onDragStart={handleDragStart}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              onDragEnd={handleDragEnd}
             />
           ))
         )}
@@ -261,9 +294,15 @@ interface WaypointItemProps {
   waypoint: CameraWaypoint;
   index: number;
   isActive: boolean;
+  isDragging: boolean;
+  isDropTarget: boolean;
   onJump: (index: number) => void;
   onRemove: (index: number) => void;
   onRename: (index: number, label: string) => void;
+  onDragStart: (index: number) => void;
+  onDragOver: (index: number) => void;
+  onDrop: (index: number) => void;
+  onDragEnd: () => void;
 }
 
 /**
@@ -271,14 +310,21 @@ interface WaypointItemProps {
  *
  * Click the label to edit it inline. Click the row background to jump.
  * The active waypoint is highlighted with a blue left border.
+ * Drag the grip handle to reorder waypoints within the list.
  */
 function WaypointItem({
   waypoint,
   index,
   isActive,
+  isDragging,
+  isDropTarget,
   onJump,
   onRemove,
   onRename,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
 }: WaypointItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(waypoint.label ?? '');
@@ -322,6 +368,22 @@ function WaypointItem({
   return (
     <div
       data-testid={`waypoint-item-${index}`}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', String(index));
+        onDragStart(index);
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        onDragOver(index);
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        onDrop(index);
+      }}
+      onDragEnd={onDragEnd}
       onClick={() => onJump(index)}
       style={{
         display: 'flex',
@@ -331,23 +393,40 @@ function WaypointItem({
         borderRadius: 6,
         cursor: 'pointer',
         borderLeft: isActive ? '3px solid #4A90D9' : '3px solid transparent',
-        backgroundColor: isActive
-          ? 'rgba(74, 144, 217, 0.08)'
-          : 'transparent',
-        transition: 'background-color 0.1s',
+        backgroundColor: isDropTarget
+          ? 'rgba(74, 144, 217, 0.15)'
+          : isActive
+            ? 'rgba(74, 144, 217, 0.08)'
+            : 'transparent',
+        opacity: isDragging ? 0.4 : 1,
+        transition: 'background-color 0.1s, opacity 0.15s',
         marginBottom: 2,
       }}
       onMouseEnter={(e) => {
-        if (!isActive) {
+        if (!isActive && !isDropTarget) {
           e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.04)';
         }
       }}
       onMouseLeave={(e) => {
-        if (!isActive) {
+        if (!isActive && !isDropTarget) {
           e.currentTarget.style.backgroundColor = 'transparent';
         }
       }}
     >
+      {/* Drag handle */}
+      <span
+        data-testid={`waypoint-drag-${index}`}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          cursor: 'grab',
+          color: '#bbb',
+          flexShrink: 0,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <GripVertical size={12} />
+      </span>
       {/* Label — click to edit, or show input when editing */}
       {isEditing ? (
         <input

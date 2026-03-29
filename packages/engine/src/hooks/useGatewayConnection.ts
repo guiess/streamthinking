@@ -78,6 +78,7 @@ interface StateSyncMessage {
   sessionId: string;
   expressions: VisualExpression[];
   expressionOrder: string[];
+  waypoints?: Array<{ x: number; y: number; zoom: number; label?: string }>;
 }
 
 interface OperationBroadcast {
@@ -101,13 +102,32 @@ interface ErrorMessage {
   message: string;
 }
 
+interface WaypointAddInbound {
+  type: 'waypoint-add';
+  waypoint: { x: number; y: number; zoom: number; label?: string };
+}
+
+interface WaypointRemoveInbound {
+  type: 'waypoint-remove';
+  index: number;
+}
+
+interface WaypointReorderInbound {
+  type: 'waypoint-reorder';
+  fromIndex: number;
+  toIndex: number;
+}
+
 type InboundMessage =
   | SessionCreatedMessage
   | StateSyncMessage
   | OperationBroadcast
   | AgentJoinedMessage
   | AgentLeftMessage
-  | ErrorMessage;
+  | ErrorMessage
+  | WaypointAddInbound
+  | WaypointRemoveInbound
+  | WaypointReorderInbound;
 
 // ── Constants ──────────────────────────────────────────────
 
@@ -146,12 +166,20 @@ export function createGatewayConnection(
   let backoffMs = INITIAL_BACKOFF_MS;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let storeUnsubscribe: (() => void) | null = null;
+  let waypointUnsubscribe: (() => void) | null = null;
 
   /** Set of operation IDs we sent — used for deduplication. */
   const sentOperationIds = new Set<string>();
 
   /** Track the last operationLog length we've processed. */
   let lastLogLength = 0;
+
+  /**
+   * When true, incoming waypoint messages from the gateway are suppressed.
+   * Used to prevent feedback loops when the local store change was initiated
+   * by the user (and we're about to send it ourselves).
+   */
+  let suppressRemoteWaypoints = false;
 
   // ── Connection object (returned to caller) ─────────────
 
@@ -208,6 +236,11 @@ export function createGatewayConnection(
       storeUnsubscribe = null;
     }
 
+    if (waypointUnsubscribe) {
+      waypointUnsubscribe();
+      waypointUnsubscribe = null;
+    }
+
     if (ws) {
       // Remove handlers to prevent close handler from triggering reconnect
       ws.onopen = null;
@@ -259,6 +292,14 @@ export function createGatewayConnection(
           message.expressions,
           message.expressionOrder,
         );
+        // Restore waypoints from the gateway session
+        if (Array.isArray(message.waypoints)) {
+          const store = useCanvasStore.getState();
+          store.clearWaypoints();
+          for (const wp of message.waypoints) {
+            store.addWaypoint(wp);
+          }
+        }
         // Load agents already registered in the session
         if (message.agents && Array.isArray(message.agents)) {
           const agentStore = useAgentStore.getState();
@@ -294,6 +335,27 @@ export function createGatewayConnection(
 
       case 'error': {
         lastError = message.message;
+        break;
+      }
+
+      case 'waypoint-add': {
+        suppressRemoteWaypoints = true;
+        useCanvasStore.getState().addWaypoint(message.waypoint);
+        suppressRemoteWaypoints = false;
+        break;
+      }
+
+      case 'waypoint-remove': {
+        suppressRemoteWaypoints = true;
+        useCanvasStore.getState().removeWaypoint(message.index);
+        suppressRemoteWaypoints = false;
+        break;
+      }
+
+      case 'waypoint-reorder': {
+        suppressRemoteWaypoints = true;
+        useCanvasStore.getState().reorderWaypoints(message.fromIndex, message.toIndex);
+        suppressRemoteWaypoints = false;
         break;
       }
     }
@@ -339,6 +401,65 @@ export function createGatewayConnection(
         pruneSentSet();
       }
     });
+
+    // Subscribe to waypoint changes for forwarding to the gateway.
+    // Uses a snapshot comparison to detect local mutations.
+    let lastWaypoints = [...useCanvasStore.getState().waypoints];
+    waypointUnsubscribe = useCanvasStore.subscribe((state) => {
+      // Skip if this change was triggered by a remote message
+      if (suppressRemoteWaypoints) return;
+
+      const current = state.waypoints;
+      if (current === lastWaypoints) return;
+      if (current.length === lastWaypoints.length &&
+          current.every((wp, i) => wp === lastWaypoints[i])) {
+        return;
+      }
+
+      // Detect what changed and send the appropriate message.
+      // New waypoint added at the end:
+      if (current.length === lastWaypoints.length + 1 &&
+          lastWaypoints.every((wp, i) => current[i] === wp)) {
+        const added = current[current.length - 1]!;
+        connection.sendMessage({
+          type: 'waypoint-add',
+          waypoint: { x: added.x, y: added.y, zoom: added.zoom, label: added.label },
+        });
+      }
+      // Waypoint removed:
+      else if (current.length === lastWaypoints.length - 1) {
+        const removedIndex = lastWaypoints.findIndex(
+          (wp, i) => current[i] !== wp && !current.includes(wp),
+        );
+        if (removedIndex >= 0) {
+          connection.sendMessage({ type: 'waypoint-remove', index: removedIndex });
+        }
+      }
+      // Reorder or other bulk change — send as reorder if sizes match:
+      else if (current.length === lastWaypoints.length) {
+        // Find the moved element — simple heuristic: find mismatched indices
+        let fromIdx = -1;
+        for (let i = 0; i < lastWaypoints.length; i++) {
+          if (lastWaypoints[i] !== current[i]) {
+            fromIdx = i;
+            break;
+          }
+        }
+        if (fromIdx >= 0) {
+          const moved = lastWaypoints[fromIdx];
+          const toIdx = current.indexOf(moved!);
+          if (toIdx >= 0 && toIdx !== fromIdx) {
+            connection.sendMessage({
+              type: 'waypoint-reorder',
+              fromIndex: fromIdx,
+              toIndex: toIdx,
+            });
+          }
+        }
+      }
+
+      lastWaypoints = [...current];
+    });
   }
 
   function handleClose(event: CloseEvent): void {
@@ -348,6 +469,11 @@ export function createGatewayConnection(
     if (storeUnsubscribe) {
       storeUnsubscribe();
       storeUnsubscribe = null;
+    }
+
+    if (waypointUnsubscribe) {
+      waypointUnsubscribe();
+      waypointUnsubscribe = null;
     }
 
     if (event.code === AUTH_FAILURE_CODE) {

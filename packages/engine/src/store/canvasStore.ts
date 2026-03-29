@@ -1154,6 +1154,31 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
       });
     },
 
+    reorderWaypoints: (fromIndex: number, toIndex: number) => {
+      const { waypoints } = get();
+      if (fromIndex < 0 || fromIndex >= waypoints.length) return;
+      if (toIndex < 0 || toIndex >= waypoints.length) return;
+      if (fromIndex === toIndex) return;
+      set((state) => {
+        const [moved] = state.waypoints.splice(fromIndex, 1);
+        state.waypoints.splice(toIndex, 0, moved!);
+        // Adjust presentation index to follow the active waypoint
+        if (state.presentationIndex === fromIndex) {
+          state.presentationIndex = toIndex;
+        } else if (
+          fromIndex < state.presentationIndex &&
+          toIndex >= state.presentationIndex
+        ) {
+          state.presentationIndex -= 1;
+        } else if (
+          fromIndex > state.presentationIndex &&
+          toIndex <= state.presentationIndex
+        ) {
+          state.presentationIndex += 1;
+        }
+      });
+    },
+
     clearWaypoints: () => {
       waypointCounter = 0;
       set((state) => {

@@ -11,6 +11,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import type { IGatewayClient } from '../gatewayClient.js';
+import type { CameraWaypoint } from '../gatewayClient.js';
 
 /** Global saves directory. */
 const SAVES_DIR = join(homedir(), '.infinicanvas', 'saves');
@@ -41,19 +42,23 @@ export function executeCanvasSave(
     return 'Canvas is empty — nothing to save.';
   }
 
+  const waypoints = client.getWaypoints();
+
   const snapshot = {
     name: params.name,
     description: params.description ?? '',
     savedAt: new Date().toISOString(),
     count: expressions.length,
     expressions,
+    waypoints,
   };
 
   const filename = toFilename(params.name);
   const filepath = join(SAVES_DIR, filename);
   writeFileSync(filepath, JSON.stringify(snapshot, null, 2), 'utf-8');
 
-  return `Saved "${params.name}" (${expressions.length} expressions) to ${filepath}`;
+  const waypointNote = waypoints.length > 0 ? `, ${waypoints.length} waypoint(s)` : '';
+  return `Saved "${params.name}" (${expressions.length} expressions${waypointNote}) to ${filepath}`;
 }
 
 /**
@@ -95,7 +100,19 @@ export async function executeCanvasLoad(
     }
   }
 
-  return `Restored "${snapshot.name ?? params.name}" — ${restored}/${snapshot.expressions.length} expressions loaded.`;
+  // Restore waypoints if present in the snapshot
+  let waypointsRestored = 0;
+  if (Array.isArray(snapshot.waypoints)) {
+    for (const wp of snapshot.waypoints as CameraWaypoint[]) {
+      if (typeof wp.x === 'number' && typeof wp.y === 'number' && typeof wp.zoom === 'number') {
+        client.sendWaypointAdd(wp);
+        waypointsRestored++;
+      }
+    }
+  }
+
+  const waypointNote = waypointsRestored > 0 ? `, ${waypointsRestored} waypoint(s)` : '';
+  return `Restored "${snapshot.name ?? params.name}" — ${restored}/${snapshot.expressions.length} expressions${waypointNote} loaded.`;
 }
 
 /**
@@ -118,15 +135,19 @@ export function executeCanvasListSaves(): string {
         name: snapshot.name ?? f.replace('.json', ''),
         description: snapshot.description ?? '',
         count: snapshot.count ?? '?',
+        waypointCount: Array.isArray(snapshot.waypoints) ? snapshot.waypoints.length : 0,
         savedAt: snapshot.savedAt ?? 'unknown',
       };
     } catch {
-      return { name: f.replace('.json', ''), description: '', count: '?', savedAt: 'unknown' };
+      return { name: f.replace('.json', ''), description: '', count: '?', waypointCount: 0, savedAt: 'unknown' };
     }
   });
 
   const lines = saves.map(
-    (s) => `• "${s.name}" — ${s.count} expressions, saved ${s.savedAt}${s.description ? ` — ${s.description}` : ''}`,
+    (s) => {
+      const wpNote = s.waypointCount > 0 ? `, ${s.waypointCount} waypoint(s)` : '';
+      return `• "${s.name}" — ${s.count} expressions${wpNote}, saved ${s.savedAt}${s.description ? ` — ${s.description}` : ''}`;
+    },
   );
 
   return `${saves.length} saved diagram(s):\n\n${lines.join('\n')}`;

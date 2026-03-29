@@ -28,6 +28,14 @@ import type {
 import { DEFAULT_EXPRESSION_STYLE } from '@infinicanvas/protocol';
 import { MCP_AUTHOR } from './defaults.js';
 
+/** A saved camera position for presentation-mode navigation. */
+export interface CameraWaypoint {
+  x: number;
+  y: number;
+  zoom: number;
+  label?: string;
+}
+
 /** Messages the gateway sends back to us. */
 interface SessionCreatedMessage {
   type: 'session-created';
@@ -39,6 +47,7 @@ interface StateSyncMessage {
   sessionId: string;
   expressions: VisualExpression[];
   expressionOrder: string[];
+  waypoints?: CameraWaypoint[];
 }
 
 interface OperationBroadcast {
@@ -71,12 +80,34 @@ interface AgentRequestInbound {
   prompt: string;
 }
 
+/** Inbound waypoint-add broadcast from the gateway. */
+interface WaypointAddInbound {
+  type: 'waypoint-add';
+  waypoint: CameraWaypoint;
+}
+
+/** Inbound waypoint-remove broadcast from the gateway. */
+interface WaypointRemoveInbound {
+  type: 'waypoint-remove';
+  index: number;
+}
+
+/** Inbound waypoint-reorder broadcast from the gateway. */
+interface WaypointReorderInbound {
+  type: 'waypoint-reorder';
+  fromIndex: number;
+  toIndex: number;
+}
+
 type ServerMessage =
   | SessionCreatedMessage
   | StateSyncMessage
   | OperationBroadcast
   | ErrorMessage
-  | AgentRequestInbound;
+  | AgentRequestInbound
+  | WaypointAddInbound
+  | WaypointRemoveInbound
+  | WaypointReorderInbound;
 
 /** Options for creating a gateway client. */
 export interface GatewayClientOptions {
@@ -139,6 +170,14 @@ export interface IGatewayClient {
   getPendingRequests(): PendingAgentRequest[];
   /** Update the agent display name and re-identify with the gateway. */
   updateAgentName(name: string): void;
+  /** Get the current waypoint list from the gateway session. */
+  getWaypoints(): CameraWaypoint[];
+  /** Send a waypoint-add message to the gateway. */
+  sendWaypointAdd(waypoint: CameraWaypoint): void;
+  /** Send a waypoint-remove message to the gateway. */
+  sendWaypointRemove(index: number): void;
+  /** Send a waypoint-reorder message to the gateway. */
+  sendWaypointReorder(fromIndex: number, toIndex: number): void;
 }
 
 /**
@@ -151,6 +190,7 @@ export class GatewayClient implements IGatewayClient {
   private ws: WebSocket | null = null;
   private sessionId: string | null = null;
   private expressions: VisualExpression[] = [];
+  private waypoints: CameraWaypoint[] = [];
   private pendingRequests: PendingAgentRequest[] = [];
   private readonly url: string;
   private readonly apiKey: string;
@@ -228,6 +268,7 @@ export class GatewayClient implements IGatewayClient {
     }
     this.sessionId = null;
     this.expressions = [];
+    this.waypoints = [];
   }
 
   isConnected(): boolean {
@@ -325,6 +366,35 @@ export class GatewayClient implements IGatewayClient {
     return requests;
   }
 
+  getWaypoints(): CameraWaypoint[] {
+    return [...this.waypoints];
+  }
+
+  sendWaypointAdd(waypoint: CameraWaypoint): void {
+    this.send({ type: 'waypoint-add', waypoint });
+    // Optimistic local update
+    this.waypoints.push(waypoint);
+  }
+
+  sendWaypointRemove(index: number): void {
+    this.send({ type: 'waypoint-remove', index });
+    // Optimistic local update
+    if (index >= 0 && index < this.waypoints.length) {
+      this.waypoints.splice(index, 1);
+    }
+  }
+
+  sendWaypointReorder(fromIndex: number, toIndex: number): void {
+    this.send({ type: 'waypoint-reorder', fromIndex, toIndex });
+    // Optimistic local update
+    if (fromIndex >= 0 && fromIndex < this.waypoints.length &&
+        toIndex >= 0 && toIndex < this.waypoints.length &&
+        fromIndex !== toIndex) {
+      const [moved] = this.waypoints.splice(fromIndex, 1);
+      this.waypoints.splice(toIndex, 0, moved!);
+    }
+  }
+
   // ── Private helpers ──────────────────────────────────────
 
   private setupMessageHandler(
@@ -355,6 +425,7 @@ export class GatewayClient implements IGatewayClient {
         case 'state-sync':
           this.sessionId = msg.sessionId;
           this.expressions = msg.expressions;
+          this.waypoints = msg.waypoints ?? [];
           this.sendIdentify();
           if (!settled) {
             settled = true;
@@ -369,6 +440,27 @@ export class GatewayClient implements IGatewayClient {
         case 'agent-request':
           this.enqueueAgentRequest(msg);
           break;
+
+        case 'waypoint-add':
+          this.waypoints.push(msg.waypoint);
+          break;
+
+        case 'waypoint-remove':
+          if (msg.index >= 0 && msg.index < this.waypoints.length) {
+            this.waypoints.splice(msg.index, 1);
+          }
+          break;
+
+        case 'waypoint-reorder': {
+          const { fromIndex, toIndex } = msg;
+          if (fromIndex >= 0 && fromIndex < this.waypoints.length &&
+              toIndex >= 0 && toIndex < this.waypoints.length &&
+              fromIndex !== toIndex) {
+            const [moved] = this.waypoints.splice(fromIndex, 1);
+            this.waypoints.splice(toIndex, 0, moved!);
+          }
+          break;
+        }
 
         case 'error':
           if (!settled) {

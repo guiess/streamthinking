@@ -14,6 +14,16 @@ import type {
   AuthorInfo,
 } from '@infinicanvas/protocol';
 
+// ── Waypoints ──────────────────────────────────────────────
+
+/** A saved camera position for presentation-mode navigation. */
+export interface CameraWaypoint {
+  x: number;
+  y: number;
+  zoom: number;
+  label?: string;
+}
+
 // ── Session ────────────────────────────────────────────────
 
 /** Server-side session state for a collaborative canvas. */
@@ -28,6 +38,8 @@ export interface Session {
   clients: Set<WebSocket>;
   /** Registered AI agents in this session. */
   agents: Map<string, AuthorInfo>;
+  /** Saved camera waypoints for presentation mode. */
+  waypoints: CameraWaypoint[];
   /** Unix timestamp (ms) when the session was created. */
   createdAt: number;
   /** Unix timestamp (ms) of the last activity in this session. */
@@ -79,13 +91,35 @@ export interface AgentRequestMessage {
   prompt: string;
 }
 
+/** Add a waypoint to the session's waypoint list. */
+export interface WaypointAddMessage {
+  type: 'waypoint-add';
+  waypoint: CameraWaypoint;
+}
+
+/** Remove a waypoint by index. */
+export interface WaypointRemoveMessage {
+  type: 'waypoint-remove';
+  index: number;
+}
+
+/** Reorder a waypoint from one index to another. */
+export interface WaypointReorderMessage {
+  type: 'waypoint-reorder';
+  fromIndex: number;
+  toIndex: number;
+}
+
 export type ClientMessage =
   | CreateSessionMessage
   | JoinMessage
   | OperationMessage
   | LeaveMessage
   | AgentRequestMessage
-  | IdentifyMessage;
+  | IdentifyMessage
+  | WaypointAddMessage
+  | WaypointRemoveMessage
+  | WaypointReorderMessage;
 
 /** Client identifies itself as an agent (sent after joining a session). */
 export interface IdentifyMessage {
@@ -105,6 +139,8 @@ export interface StateSyncMessage {
   sessionId: string;
   expressions: VisualExpression[];
   expressionOrder: string[];
+  waypoints?: CameraWaypoint[];
+  agents?: AuthorInfo[];
 }
 
 export interface OperationBroadcast {
@@ -128,10 +164,32 @@ export interface ErrorMessage {
   message: string;
 }
 
+/** Broadcast a waypoint addition to other clients. */
+export interface WaypointAddBroadcast {
+  type: 'waypoint-add';
+  waypoint: CameraWaypoint;
+}
+
+/** Broadcast a waypoint removal to other clients. */
+export interface WaypointRemoveBroadcast {
+  type: 'waypoint-remove';
+  index: number;
+}
+
+/** Broadcast a waypoint reorder to other clients. */
+export interface WaypointReorderBroadcast {
+  type: 'waypoint-reorder';
+  fromIndex: number;
+  toIndex: number;
+}
+
 export type ServerMessage =
   | SessionCreatedMessage
   | StateSyncMessage
   | OperationBroadcast
   | AgentJoinedMessage
   | AgentLeftMessage
-  | ErrorMessage;
+  | ErrorMessage
+  | WaypointAddBroadcast
+  | WaypointRemoveBroadcast
+  | WaypointReorderBroadcast;
