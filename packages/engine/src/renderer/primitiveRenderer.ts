@@ -185,8 +185,6 @@ function renderPrimitive(
 
 // ── Shape renderers (Rough.js) ───────────────────────────────
 
-/** Reference size for cached shape drawables. */
-const REF_SIZE = 100;
 
 /** Render rectangle. [AC2] */
 function renderRectangle(
@@ -199,14 +197,12 @@ function renderRectangle(
   const { width, height } = expr.size;
   const options = mapStyleToRoughOptions(expr.style, idToSeed(expr.id));
 
-  // Create drawable at fixed reference size; scale to actual size at render
   const drawable = getOrCreateDrawable(expr, () =>
-    rc.rectangle(0, 0, REF_SIZE, REF_SIZE, options),
+    rc.rectangle(0, 0, width, height, options),
   );
 
   ctx.save();
   ctx.translate(x, y);
-  ctx.scale(width / REF_SIZE, height / REF_SIZE);
   rc.draw(drawable);
   ctx.restore();
 
@@ -228,12 +224,11 @@ function renderEllipse(
   const options = mapStyleToRoughOptions(expr.style, idToSeed(expr.id));
 
   const drawable = getOrCreateDrawable(expr, () =>
-    rc.ellipse(REF_SIZE / 2, REF_SIZE / 2, REF_SIZE, REF_SIZE, options),
+    rc.ellipse(width / 2, height / 2, width, height, options),
   );
 
   ctx.save();
   ctx.translate(x, y);
-  ctx.scale(width / REF_SIZE, height / REF_SIZE);
   rc.draw(drawable);
   ctx.restore();
 
@@ -253,20 +248,19 @@ function renderDiamond(
   const { width, height } = expr.size;
   const options = mapStyleToRoughOptions(expr.style, idToSeed(expr.id));
 
-  const refPoints: [number, number][] = [
-    [REF_SIZE / 2, 0],
-    [REF_SIZE, REF_SIZE / 2],
-    [REF_SIZE / 2, REF_SIZE],
-    [0, REF_SIZE / 2],
+  const points: [number, number][] = [
+    [width / 2, 0],
+    [width, height / 2],
+    [width / 2, height],
+    [0, height / 2],
   ];
 
   const drawable = getOrCreateDrawable(expr, () =>
-    rc.polygon(refPoints, options),
+    rc.polygon(points, options),
   );
 
   ctx.save();
   ctx.translate(x, y);
-  ctx.scale(width / REF_SIZE, height / REF_SIZE);
   rc.draw(drawable);
   ctx.restore();
 
@@ -984,8 +978,7 @@ function getOrCreateDrawable(
   const isShape = expr.kind === 'rectangle' || expr.kind === 'ellipse' || expr.kind === 'diamond';
   const cacheData = isShape ? undefined : expr.data;
   const cachePosition = isShape ? { x: 0, y: 0 } : expr.position;
-  // Use fixed reference size for shapes so resize never invalidates cache
-  const cacheSize = isShape ? { width: 100, height: 100 } : expr.size;
+  const cacheSize = expr.size;
   const ctx = { style: expr.style, position: cachePosition, size: cacheSize, data: cacheData };
   const cached = drawableCache.get(expr.id, ctx);
   if (cached) return cached;
