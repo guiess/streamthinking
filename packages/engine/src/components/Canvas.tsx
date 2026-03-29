@@ -381,11 +381,10 @@ function TextEditor({ expression, initialText, camera, editorTextRef, onCommit, 
       textarea.focus();
       const len = textarea.value.length;
       textarea.setSelectionRange(len, len);
-      // For middle-aligned (shape labels), don't auto-resize — let flexbox center
-      if (verticalAlign !== 'middle') {
-        textarea.style.height = 'auto';
-        textarea.style.height = `${Math.min(textarea.scrollHeight, Math.max(screenHeight, 24))}px`;
-      }
+      // Auto-size to existing content, capped at 60% of shape for middle-aligned
+      textarea.style.height = 'auto';
+      const maxH = verticalAlign === 'middle' ? effectiveHeight * 0.6 : Math.max(screenHeight, 24);
+      textarea.style.height = `${Math.min(textarea.scrollHeight, maxH)}px`;
     }
   }, []);
 
@@ -448,13 +447,10 @@ function TextEditor({ expression, initialText, camera, editorTextRef, onCommit, 
           onInput={(e) => {
             const el = e.currentTarget;
             editorTextRef.current = el.value;
-            // Only auto-resize for top-aligned (text objects). Middle-aligned
-            // (shape labels) keep fixed height so flexbox centering works.
-            if (verticalAlign !== 'middle') {
-              el.style.height = 'auto';
-              el.style.height = `${Math.min(el.scrollHeight, effectiveHeight)}px`;
-            }
-          }}
+            el.style.height = 'auto';
+            const maxH = verticalAlign === 'middle' ? effectiveHeight * 0.6 : effectiveHeight;
+            el.style.height = `${Math.min(el.scrollHeight, maxH)}px`;
+          }}}
           style={{
             width: '85%',
             height: `${Math.min(scaledFontSize * 1.4, effectiveHeight)}px`,
