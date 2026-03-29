@@ -561,9 +561,8 @@ function renderStencil(
   const img = getCachedImage(dataUri);
 
   if (img) {
-    // Compute icon area — leave room for label if present
-    const iconHeight = label ? height - STENCIL_LABEL_FONT_SIZE - STENCIL_LABEL_GAP : height;
-    ctx.drawImage(img, x, y, width, iconHeight);
+    // Draw icon at full size — label renders below the bounding box
+    ctx.drawImage(img, x, y, width, height);
   } else {
     // Loading placeholder
     ctx.fillStyle = '#e0e0e0';
@@ -581,9 +580,9 @@ function renderStencil(
     const fontFamily = expr.style.fontFamily ?? DEFAULT_FONT_FAMILY;
     ctx.font = `${STENCIL_LABEL_FONT_SIZE}px ${fontFamily}`;
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
+    ctx.textBaseline = 'top';
     ctx.fillStyle = expr.style.strokeColor;
-    ctx.fillText(label, x + width / 2, y + height);
+    ctx.fillText(label, x + width / 2, y + height + STENCIL_LABEL_GAP);
   }
 }
 
