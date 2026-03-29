@@ -431,9 +431,26 @@ function renderArrow(
       renderArrowhead(ctx, start[0], start[1], angle, arrowSize, startType);
     }
   } else {
-    // Normal straight arrow
+    // Shorten line at ends where arrowheads exist so the line doesn't overlap the tip
+    const drawPoints: [number, number][] = points.map(p => [p[0], p[1]]);
+    if (endType !== 'none' && drawPoints.length >= 2) {
+      const last = drawPoints[drawPoints.length - 1]!;
+      const prev = drawPoints[drawPoints.length - 2]!;
+      const angle = Math.atan2(last[1] - prev[1], last[0] - prev[0]);
+      const shorten = arrowSize * 0.8;
+      drawPoints[drawPoints.length - 1] = [last[0] - shorten * Math.cos(angle), last[1] - shorten * Math.sin(angle)];
+    }
+    if (startType !== 'none' && drawPoints.length >= 2) {
+      const first = drawPoints[0]!;
+      const second = drawPoints[1]!;
+      const angle = Math.atan2(first[1] - second[1], first[0] - second[0]);
+      const shorten = arrowSize * 0.8;
+      drawPoints[0] = [first[0] - shorten * Math.cos(angle), first[1] - shorten * Math.sin(angle)];
+    }
+
+    // Use shortened points for the line (not cached — depends on arrowSize)
     const drawable = getOrCreateDrawable(expr, () =>
-      rc.generator.linearPath(points, options),
+      rc.generator.linearPath(drawPoints, options),
     );
     rc.draw(drawable);
 
