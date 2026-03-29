@@ -118,7 +118,13 @@ export function renderExpressions(
     ctx.save();
     ctx.globalAlpha = expr.style.opacity;
 
-    renderPrimitive(ctx, roughCanvas, expr, expressions, editingId);
+    // Ensure strokes stay visible when zoomed out — minimum 1px screen
+    const minWorldWidth = 1 / camera.zoom;
+    if (expr.style.strokeWidth < minWorldWidth) {
+      ctx.lineWidth = minWorldWidth;
+    }
+
+    renderPrimitive(ctx, roughCanvas, expr, expressions, editingId, camera);
 
     ctx.restore();
   }
@@ -135,6 +141,7 @@ function renderPrimitive(
   expr: VisualExpression,
   expressions: Record<string, VisualExpression>,
   editingId?: string | null,
+  camera?: Camera,
 ): void {
   const { kind } = expr;
   const isEditing = expr.id === editingId;
@@ -153,7 +160,7 @@ function renderPrimitive(
       renderLine(ctx, roughCanvas, expr);
       break;
     case 'arrow':
-      renderArrow(ctx, roughCanvas, expr, expressions);
+      renderArrow(ctx, roughCanvas, expr, expressions, camera);
       break;
     case 'freehand':
       renderFreehand(ctx, expr);
@@ -350,11 +357,15 @@ function renderArrow(
   rc: RoughCanvas,
   expr: VisualExpression,
   expressions: Record<string, VisualExpression>,
+  camera?: Camera,
 ): void {
   if (expr.data.kind !== 'arrow') return;
   const data = expr.data as ArrowData;
   const { startArrowhead, endArrowhead } = data;
   const options = mapStyleToRoughOptions(expr.style, idToSeed(expr.id));
+  // Scale arrowheads so they stay visible when zoomed out
+  const zoom = camera?.zoom ?? 1;
+  const arrowSize = Math.max(ARROWHEAD_SIZE, ARROWHEAD_SIZE / zoom);
 
   // Resolve binding positions for connected arrows
   const points = resolveBindings(expr, expressions);
@@ -416,11 +427,11 @@ function renderArrow(
     ctx.fillStyle = expr.style.strokeColor;
     if (endArrowhead) {
       const angle = Math.atan2(end[1] - cp2y, end[0] - cp2x);
-      renderArrowhead(ctx, end[0], end[1], angle, ARROWHEAD_SIZE);
+      renderArrowhead(ctx, end[0], end[1], angle, arrowSize);
     }
     if (startArrowhead) {
       const angle = Math.atan2(start[1] - cp1y, start[0] - cp1x);
-      renderArrowhead(ctx, start[0], start[1], angle, ARROWHEAD_SIZE);
+      renderArrowhead(ctx, start[0], start[1], angle, arrowSize);
     }
   } else {
     // Normal straight arrow
@@ -435,14 +446,14 @@ function renderArrow(
       const last = points[points.length - 1]!;
       const prev = points[points.length - 2]!;
       const angle = Math.atan2(last[1] - prev[1], last[0] - prev[0]);
-      renderArrowhead(ctx, last[0], last[1], angle, ARROWHEAD_SIZE);
+      renderArrowhead(ctx, last[0], last[1], angle, arrowSize);
     }
 
     if (startArrowhead && points.length >= 2) {
       const first = points[0]!;
       const second = points[1]!;
       const angle = Math.atan2(first[1] - second[1], first[0] - second[0]);
-      renderArrowhead(ctx, first[0], first[1], angle, ARROWHEAD_SIZE);
+      renderArrowhead(ctx, first[0], first[1], angle, arrowSize);
     }
   }
 
