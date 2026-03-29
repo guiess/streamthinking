@@ -42,6 +42,7 @@ export const EDITABLE_KINDS: Record<string, EditableKindConfig> = {
   'rectangle': { field: 'label', deleteOnEmpty: false },
   'ellipse': { field: 'label', deleteOnEmpty: false },
   'diamond': { field: 'label', deleteOnEmpty: false },
+  'stencil': { field: 'label', deleteOnEmpty: false },
 };
 
 /** Public interface returned by the useInlineEditor hook. */
