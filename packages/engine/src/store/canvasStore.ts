@@ -95,6 +95,16 @@ function pushOperation(log: ProtocolOperation[], op: ProtocolOperation): void {
   }
 }
 
+/** Check if two expressions' bounding boxes overlap. */
+function rectsOverlap(a: VisualExpression, b: VisualExpression): boolean {
+  return (
+    a.position.x < b.position.x + b.size.width &&
+    a.position.x + a.size.width > b.position.x &&
+    a.position.y < b.position.y + b.size.height &&
+    a.position.y + a.size.height > b.position.y
+  );
+}
+
 /** Extract a snapshot from the current canvas state (expressions + z-order). */
 function captureSnapshot(state: CanvasState): CanvasSnapshot {
   // Build a plain-object clone of expressions (immer draft → plain)
@@ -1051,10 +1061,21 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
       const idSet = new Set(ids);
       set((state) => {
         const order = [...state.expressionOrder];
-        // Move each target ID one position forward (toward end = toward front)
+        // For each target, find the next overlapping non-target and jump past it
         for (let i = order.length - 2; i >= 0; i--) {
-          if (idSet.has(order[i]!) && !idSet.has(order[i + 1]!)) {
-            [order[i], order[i + 1]] = [order[i + 1]!, order[i]!];
+          if (!idSet.has(order[i]!)) continue;
+          const expr = state.expressions[order[i]!];
+          if (!expr) continue;
+          // Find next non-target that overlaps
+          for (let j = i + 1; j < order.length; j++) {
+            if (idSet.has(order[j]!)) continue;
+            const other = state.expressions[order[j]!];
+            if (other && rectsOverlap(expr, other)) {
+              // Move target to just after this overlapping object
+              const [moved] = order.splice(i, 1);
+              order.splice(j, 0, moved!);
+              break;
+            }
           }
         }
         state.expressionOrder = order;
@@ -1066,10 +1087,21 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
       const idSet = new Set(ids);
       set((state) => {
         const order = [...state.expressionOrder];
-        // Move each target ID one position backward (toward start = toward back)
+        // For each target, find the previous overlapping non-target and jump before it
         for (let i = 1; i < order.length; i++) {
-          if (idSet.has(order[i]!) && !idSet.has(order[i - 1]!)) {
-            [order[i], order[i - 1]] = [order[i - 1]!, order[i]!];
+          if (!idSet.has(order[i]!)) continue;
+          const expr = state.expressions[order[i]!];
+          if (!expr) continue;
+          // Find previous non-target that overlaps
+          for (let j = i - 1; j >= 0; j--) {
+            if (idSet.has(order[j]!)) continue;
+            const other = state.expressions[order[j]!];
+            if (other && rectsOverlap(expr, other)) {
+              // Move target to just before this overlapping object
+              const [moved] = order.splice(i, 1);
+              order.splice(j, 0, moved!);
+              break;
+            }
           }
         }
         state.expressionOrder = order;
