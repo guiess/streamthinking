@@ -90,6 +90,15 @@ function createOperation(
   };
 }
 
+/** Strip empty string values from a style to prevent gateway schema rejection. */
+function sanitizeStyle(style: ExpressionStyle): ExpressionStyle {
+  const clean = { ...style };
+  for (const [k, v] of Object.entries(clean)) {
+    if (v === '') delete (clean as Record<string, unknown>)[k];
+  }
+  return clean;
+}
+
 /** Append an operation to the log, evicting oldest entries if over cap. */
 function pushOperation(log: ProtocolOperation[], op: ProtocolOperation): void {
   log.push(op);
@@ -332,7 +341,7 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
           position: expression.position,
           size: expression.size,
           data: expression.data,
-          style: expression.style,
+          style: sanitizeStyle(expression.style),
           angle: expression.angle,
         });
         pushOperation(state.operationLog, operation);
@@ -399,7 +408,7 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
         if (safeUpdates.position) changes.position = safeUpdates.position;
         if (safeUpdates.size) changes.size = safeUpdates.size;
         if (safeUpdates.angle !== undefined) changes.angle = safeUpdates.angle;
-        if (safeUpdates.style) changes.style = safeUpdates.style;
+        if (safeUpdates.style) changes.style = sanitizeStyle(safeUpdates.style as ExpressionStyle);
         if (safeUpdates.data) changes.data = safeUpdates.data;
 
         const operation = createOperation('update', {
