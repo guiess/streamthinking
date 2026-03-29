@@ -559,16 +559,19 @@ function renderStencil(
   // Apply expression style colors to the SVG
   const strokeColor = expr.style.strokeColor ?? '#1e1e1e';
   const bgColor = expr.style.backgroundColor ?? 'none';
+  const fillStyle = expr.style.fillStyle ?? 'hachure';
+  const opacity = expr.style.opacity ?? 1;
   
   // Replace currentColor with the expression's stroke color
   let styledSvg = entry.svgContent.replace(/currentColor/g, strokeColor);
   
-  // If background color is set (not default), inject a fill rect behind the content
-  if (bgColor !== 'none' && bgColor !== 'transparent' && bgColor !== '#00000000') {
-    // Add a background rect as the first child of the SVG
+  // If fill style is not 'none' and background color is set, inject a fill rect
+  const hasFill = fillStyle !== 'none' && bgColor !== 'none' && bgColor !== 'transparent' && bgColor !== '#00000000';
+  if (hasFill) {
+    const fillOpacity = fillStyle === 'solid' ? '0.6' : '0.25';
     styledSvg = styledSvg.replace(
       /(<svg[^>]*>)/,
-      `$1<rect width="100%" height="100%" fill="${bgColor}" rx="4" opacity="0.3"/>`,
+      `$1<rect width="100%" height="100%" fill="${bgColor}" rx="4" opacity="${fillOpacity}"/>`,
     );
   }
 
@@ -576,8 +579,10 @@ function renderStencil(
   const img = getCachedImage(dataUri);
 
   if (img) {
-    // Draw icon at full size — label renders below the bounding box
+    ctx.save();
+    ctx.globalAlpha = opacity;
     ctx.drawImage(img, x, y, width, height);
+    ctx.restore();
   } else {
     // Loading placeholder
     ctx.fillStyle = '#e0e0e0';
