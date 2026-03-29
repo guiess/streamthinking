@@ -29,8 +29,8 @@ const DEFAULT_FONT_FAMILY = 'Architects Daughter, cursive';
 /** Padding inside sticky notes for text (px). */
 const STICKY_NOTE_PADDING = 12;
 
-/** Font size for stencil labels (px). */
-const STENCIL_LABEL_FONT_SIZE = 12;
+/** Font size for stencil labels at base 44px icon (px). */
+const STENCIL_LABEL_FONT_SIZE = 8;
 
 /** Gap between stencil icon bottom and label text (px). */
 const STENCIL_LABEL_GAP = 4;
@@ -218,7 +218,7 @@ function resolveStencilKind(expr: VisualExpression): TextConfig {
   // Slider value is for a 44px icon — scale by same ratio as the stencil.
   const scaleFactor = Math.min(expr.size.width, expr.size.height) / 44;
   const baseSize = expr.style.fontSize ?? STENCIL_LABEL_FONT_SIZE;
-  const fontSize = Math.max(10, Math.round(baseSize * scaleFactor));
+  const fontSize = Math.round(baseSize * scaleFactor);
   const gap = fontSize * 0.3;
 
   return {
