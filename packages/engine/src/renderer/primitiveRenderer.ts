@@ -590,6 +590,14 @@ function renderStencil(
       ctx.strokeStyle = bgColor;
       ctx.lineWidth = 1;
 
+      // Seeded pseudo-random for stable wobble across frames
+      let seed = 0;
+      for (let c = 0; c < expr.id.length; c++) seed = ((seed << 5) - seed + expr.id.charCodeAt(c)) | 0;
+      const seededRandom = () => {
+        seed = (seed * 16807 + 0) % 2147483647;
+        return (seed & 0x7fffffff) / 2147483647;
+      };
+
       // Helper: draw a wobbly line with roughness-based jitter
       const wobblyLine = (x1: number, y1: number, x2: number, y2: number) => {
         if (roughness < 0.5) {
@@ -601,8 +609,8 @@ function renderStencil(
         ctx.moveTo(x1, y1);
         for (let s = 1; s <= segments; s++) {
           const t = s / segments;
-          const jx = (Math.random() - 0.5) * roughness * 2;
-          const jy = (Math.random() - 0.5) * roughness * 2;
+          const jx = (seededRandom() - 0.5) * roughness * 2;
+          const jy = (seededRandom() - 0.5) * roughness * 2;
           ctx.lineTo(x1 + (x2 - x1) * t + jx, y1 + (y2 - y1) * t + jy);
         }
       };
