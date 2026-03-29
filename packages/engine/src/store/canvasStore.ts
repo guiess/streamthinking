@@ -209,6 +209,34 @@ function updateBoundArrows(
       const startTarget = data.startBinding ? state.expressions[data.startBinding.expressionId] : null;
       const endTarget = data.endBinding ? state.expressions[data.endBinding.expressionId] : null;
 
+      // Self-loop: use stored anchors (user chose the snap points)
+      const isSelfLoop = data.startBinding && data.endBinding &&
+        data.startBinding.expressionId === data.endBinding.expressionId;
+      if (isSelfLoop && startTarget) {
+        const sp = getAnchorPoint(startTarget, data.startBinding!.anchor || 'top', data.startBinding!.ratio ?? 0.5);
+        const ep = getAnchorPoint(startTarget, data.endBinding!.anchor || 'right', data.endBinding!.ratio ?? 0.5);
+        points[0] = [sp.x, sp.y];
+        points[points.length - 1] = [ep.x, ep.y];
+
+        // Bbox includes bezier control points
+        const loopSize = Math.max(startTarget.size.width, startTarget.size.height) * 0.6;
+        const midX = (sp.x + ep.x) / 2, midY = (sp.y + ep.y) / 2;
+        const cx = startTarget.position.x + startTarget.size.width / 2;
+        const cy = startTarget.position.y + startTarget.size.height / 2;
+        const dist = Math.hypot(midX - cx, midY - cy) || 1;
+        const cpX = midX + ((midX - cx) / dist) * loopSize;
+        const cpY = midY + ((midY - cy) / dist) * loopSize;
+        arrow.position = {
+          x: Math.min(sp.x, ep.x, cpX),
+          y: Math.min(sp.y, ep.y, cpY),
+        };
+        arrow.size = {
+          width: Math.max(Math.max(sp.x, ep.x, cpX) - arrow.position.x, 1),
+          height: Math.max(Math.max(sp.y, ep.y, cpY) - arrow.position.y, 1),
+        };
+        continue;
+      }
+
       // Use shape centers as reference points for smart routing
       const startRef = startTarget
         ? { x: startTarget.position.x + startTarget.size.width / 2, y: startTarget.position.y + startTarget.size.height / 2 }
@@ -239,24 +267,6 @@ function updateBoundArrows(
         if (py < minY) minY = py;
         if (px > maxX) maxX = px;
         if (py > maxY) maxY = py;
-      }
-
-      // Self-loop: expand bbox to include the bezier curve's control points
-      const isSelfLoop = data.startBinding && data.endBinding &&
-        data.startBinding.expressionId === data.endBinding.expressionId;
-      if (isSelfLoop && startTarget) {
-        const loopSize = Math.max(startTarget.size.width, startTarget.size.height) * 0.7;
-        const midX = (points[0]![0] + points[points.length - 1]![0]) / 2;
-        const midY = (points[0]![1] + points[points.length - 1]![1]) / 2;
-        const cx = startTarget.position.x + startTarget.size.width / 2;
-        const cy = startTarget.position.y + startTarget.size.height / 2;
-        const dist = Math.hypot(midX - cx, midY - cy) || 1;
-        const cpX = midX + ((midX - cx) / dist) * loopSize;
-        const cpY = midY + ((midY - cy) / dist) * loopSize;
-        if (cpX < minX) minX = cpX;
-        if (cpY < minY) minY = cpY;
-        if (cpX > maxX) maxX = cpX;
-        if (cpY > maxY) maxY = cpY;
       }
 
       arrow.position = { x: minX, y: minY };

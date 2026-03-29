@@ -137,17 +137,11 @@ export function resolveBindings(
   const startShape = arrowData.startBinding ? expressions[arrowData.startBinding.expressionId] : null;
   const endShape = arrowData.endBinding ? expressions[arrowData.endBinding.expressionId] : null;
 
-  // Self-loop: both bound to same shape — force different edges
+  // Self-loop: both bound to same shape — use stored anchors directly
   const isSelfLoop = startShape && endShape && arrowData.startBinding!.expressionId === arrowData.endBinding!.expressionId;
   if (isSelfLoop) {
-    const startAnchor = arrowData.startBinding!.anchor || 'top';
-    const endAnchor = arrowData.endBinding!.anchor || 'right';
-    // If both on same edge, shift end to adjacent edge
-    const actualEnd = startAnchor === endAnchor
-      ? (startAnchor === 'top' ? 'right' : startAnchor === 'right' ? 'bottom' : startAnchor === 'bottom' ? 'left' : 'top')
-      : endAnchor;
-    const startPt = getAnchorPoint(startShape, startAnchor, arrowData.startBinding!.ratio ?? 0.5);
-    const endPt = getAnchorPoint(endShape, actualEnd, arrowData.endBinding!.ratio ?? 0.5);
+    const startPt = getAnchorPoint(startShape, arrowData.startBinding!.anchor || 'top', arrowData.startBinding!.ratio ?? 0.5);
+    const endPt = getAnchorPoint(endShape, arrowData.endBinding!.anchor || 'right', arrowData.endBinding!.ratio ?? 0.5);
     points[0] = [startPt.x, startPt.y];
     points[points.length - 1] = [endPt.x, endPt.y];
     return points;
