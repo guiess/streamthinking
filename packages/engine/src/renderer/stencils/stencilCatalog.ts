@@ -45,6 +45,15 @@ import {
   PROMETHEUS_SVG,
 } from './svgs/azure.js';
 import {
+  NGFW_SVG,
+  WAF_SVG,
+  VPN_GATEWAY_SVG,
+  SDWAN_SVG,
+  SIEM_SVG,
+  ENDPOINT_PROTECTION_SVG,
+  SSL_INSPECTION_SVG,
+} from './svgs/security.js';
+import {
   K8S_POD_SVG,
   K8S_DEPLOYMENT_SVG,
   K8S_SERVICE_SVG,
@@ -222,6 +231,15 @@ export const STENCIL_CATALOG: Map<string, StencilEntry> = new Map([
   ['private-endpoint', { id: 'private-endpoint', category: 'azure', label: 'Private Endpoint', svgContent: AZURE_PRIVATE_ENDPOINT_SVG, defaultSize: ICON_SIZE }],
   ['nsp', { id: 'nsp', category: 'azure', label: 'Network Security Perimeter', svgContent: AZURE_NSP_SVG, defaultSize: { width: 200, height: 150 } }],
   ['prometheus', { id: 'prometheus', category: 'generic-it', label: 'Prometheus', svgContent: PROMETHEUS_SVG, defaultSize: ICON_SIZE }],
+
+  // ── Security ────────────────────────────────────────────
+  ['ngfw', { id: 'ngfw', category: 'security', label: 'Next-Gen Firewall', svgContent: NGFW_SVG, defaultSize: ICON_SIZE }],
+  ['waf', { id: 'waf', category: 'security', label: 'WAF', svgContent: WAF_SVG, defaultSize: ICON_SIZE }],
+  ['vpn-gateway', { id: 'vpn-gateway', category: 'security', label: 'VPN Gateway', svgContent: VPN_GATEWAY_SVG, defaultSize: ICON_SIZE }],
+  ['sdwan', { id: 'sdwan', category: 'security', label: 'SD-WAN', svgContent: SDWAN_SVG, defaultSize: ICON_SIZE }],
+  ['siem', { id: 'siem', category: 'security', label: 'SIEM', svgContent: SIEM_SVG, defaultSize: ICON_SIZE }],
+  ['endpoint-protection', { id: 'endpoint-protection', category: 'security', label: 'Endpoint Protection', svgContent: ENDPOINT_PROTECTION_SVG, defaultSize: ICON_SIZE }],
+  ['ssl-inspection', { id: 'ssl-inspection', category: 'security', label: 'SSL Inspection', svgContent: SSL_INSPECTION_SVG, defaultSize: ICON_SIZE }],
 
   // ── Kubernetes (Sub-ticket C) ───────────────────────────
   [

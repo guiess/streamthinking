@@ -42,6 +42,7 @@ const CATEGORY_DISPLAY_NAMES: Record<string, string> = {
   'generic-it': 'Generic IT',
   kubernetes: 'Kubernetes',
   network: 'Network',
+  security: 'Security',
 };
 
 // ── Props ──────────────────────────────────────────────────
