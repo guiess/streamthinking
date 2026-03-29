@@ -145,11 +145,14 @@ export function StencilPalette({ onInsert, isOpen }: StencilPaletteProps) {
       );
       event.dataTransfer.effectAllowed = 'copy';
 
-      // Use the SVG thumbnail as drag image
-      const img = event.currentTarget.querySelector('img');
-      if (img) {
-        event.dataTransfer.setDragImage(img, 24, 24);
-      }
+      // Create offscreen drag preview from SVG
+      const dragImg = new Image(40, 40);
+      dragImg.src = svgToDataUri(entry.svgContent);
+      document.body.appendChild(dragImg);
+      dragImg.style.position = 'absolute';
+      dragImg.style.top = '-9999px';
+      event.dataTransfer.setDragImage(dragImg, 20, 20);
+      requestAnimationFrame(() => document.body.removeChild(dragImg));
     },
     [],
   );
