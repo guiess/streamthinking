@@ -448,9 +448,12 @@ function TextEditor({ expression, initialText, camera, editorTextRef, onCommit, 
           onInput={(e) => {
             const el = e.currentTarget;
             editorTextRef.current = el.value;
-            // Auto-resize height to content so flexbox centers properly
-            el.style.height = 'auto';
-            el.style.height = `${Math.min(el.scrollHeight, effectiveHeight)}px`;
+            // Only auto-resize for top-aligned (text objects). Middle-aligned
+            // (shape labels) keep fixed height so flexbox centering works.
+            if (verticalAlign !== 'middle') {
+              el.style.height = 'auto';
+              el.style.height = `${Math.min(el.scrollHeight, effectiveHeight)}px`;
+            }
           }}
           style={{
             width: '85%',
