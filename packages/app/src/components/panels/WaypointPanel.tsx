@@ -372,6 +372,13 @@ function WaypointItem({
       onDragStart={(e) => {
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', String(index));
+        // Use minimal drag image to avoid floating counter/button artifacts
+        const ghost = document.createElement('div');
+        ghost.textContent = waypoint.label || `View ${index + 1}`;
+        ghost.style.cssText = 'position:absolute;top:-999px;padding:4px 8px;background:#4A90D9;color:#fff;border-radius:4px;font-size:12px;font-family:system-ui';
+        document.body.appendChild(ghost);
+        e.dataTransfer.setDragImage(ghost, 0, 0);
+        requestAnimationFrame(() => document.body.removeChild(ghost));
         onDragStart(index);
       }}
       onDragOver={(e) => {
@@ -393,9 +400,8 @@ function WaypointItem({
         borderRadius: 6,
         cursor: 'pointer',
         borderLeft: isActive ? '3px solid #4A90D9' : '3px solid transparent',
-        backgroundColor: isDropTarget
-          ? 'rgba(74, 144, 217, 0.15)'
-          : isActive
+        borderTop: isDropTarget ? '2px solid #4A90D9' : '2px solid transparent',
+        backgroundColor: isActive
             ? 'rgba(74, 144, 217, 0.08)'
             : 'transparent',
         opacity: isDragging ? 0.4 : 1,
