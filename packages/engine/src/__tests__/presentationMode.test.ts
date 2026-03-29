@@ -9,6 +9,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useCanvasStore } from '../store/canvasStore.js';
+import { _resetWaypointCounter } from '../store/canvasStore.js';
 import type { CameraWaypoint } from '../types/index.js';
 
 // ── Store reset before each test ───────────────────────────
@@ -25,8 +26,10 @@ beforeEach(() => {
     canRedo: false,
     waypoints: [],
     presentationIndex: -1,
+    waypointPanelOpen: false,
   });
   useCanvasStore.getState().clearHistory();
+  _resetWaypointCounter();
 });
 
 // ── addWaypoint ────────────────────────────────────────────
@@ -37,7 +40,7 @@ describe('addWaypoint', () => {
 
     const state = useCanvasStore.getState();
     expect(state.waypoints).toHaveLength(1);
-    expect(state.waypoints[0]).toEqual({ x: 100, y: 200, zoom: 1.5 });
+    expect(state.waypoints[0]).toMatchObject({ x: 100, y: 200, zoom: 1.5 });
   });
 
   it('adds a waypoint with an optional label', () => {
@@ -57,7 +60,30 @@ describe('addWaypoint', () => {
 
     const state = useCanvasStore.getState();
     expect(state.waypoints).toHaveLength(1);
-    expect(state.waypoints[0]).toEqual({ x: 300, y: 400, zoom: 0.75 });
+    expect(state.waypoints[0]).toMatchObject({ x: 300, y: 400, zoom: 0.75 });
+  });
+
+  it('generates a default label "View N" when no label provided', () => {
+    useCanvasStore.getState().addWaypoint({ x: 0, y: 0, zoom: 1 });
+    useCanvasStore.getState().addWaypoint({ x: 100, y: 100, zoom: 2 });
+
+    const state = useCanvasStore.getState();
+    expect(state.waypoints[0]?.label).toBe('View 1');
+    expect(state.waypoints[1]?.label).toBe('View 2');
+  });
+
+  it('generates a default label when snapshotting current camera', () => {
+    useCanvasStore.getState().addWaypoint();
+
+    const state = useCanvasStore.getState();
+    expect(state.waypoints[0]?.label).toBe('View 1');
+  });
+
+  it('preserves explicit label over default', () => {
+    useCanvasStore.getState().addWaypoint({ x: 0, y: 0, zoom: 1, label: 'Custom Name' });
+
+    const state = useCanvasStore.getState();
+    expect(state.waypoints[0]?.label).toBe('Custom Name');
   });
 
   it('appends multiple waypoints in order', () => {
@@ -71,6 +97,62 @@ describe('addWaypoint', () => {
     expect(state.waypoints[0]?.x).toBe(0);
     expect(state.waypoints[1]?.x).toBe(100);
     expect(state.waypoints[2]?.x).toBe(200);
+  });
+
+  it('increments label counter based on total waypoints added', () => {
+    useCanvasStore.getState().addWaypoint({ x: 0, y: 0, zoom: 1 });
+    useCanvasStore.getState().addWaypoint({ x: 1, y: 1, zoom: 1 });
+    useCanvasStore.getState().removeWaypoint(0);
+    // After removing first, next add should be "View 3" not "View 2"
+    useCanvasStore.getState().addWaypoint({ x: 2, y: 2, zoom: 1 });
+
+    const state = useCanvasStore.getState();
+    expect(state.waypoints).toHaveLength(2);
+    expect(state.waypoints[1]?.label).toBe('View 3');
+  });
+});
+
+// ── updateWaypoint ─────────────────────────────────────────
+
+describe('updateWaypoint', () => {
+  it('updates the label of a waypoint', () => {
+    useCanvasStore.getState().addWaypoint({ x: 100, y: 200, zoom: 1.5 });
+
+    useCanvasStore.getState().updateWaypoint(0, { label: 'Architecture Overview' });
+
+    const state = useCanvasStore.getState();
+    expect(state.waypoints[0]?.label).toBe('Architecture Overview');
+    // Other fields unchanged
+    expect(state.waypoints[0]?.x).toBe(100);
+    expect(state.waypoints[0]?.y).toBe(200);
+    expect(state.waypoints[0]?.zoom).toBe(1.5);
+  });
+
+  it('updates the camera position of a waypoint', () => {
+    useCanvasStore.getState().addWaypoint({ x: 100, y: 200, zoom: 1.5 });
+
+    useCanvasStore.getState().updateWaypoint(0, { x: 500, y: 600 });
+
+    const state = useCanvasStore.getState();
+    expect(state.waypoints[0]?.x).toBe(500);
+    expect(state.waypoints[0]?.y).toBe(600);
+    expect(state.waypoints[0]?.zoom).toBe(1.5); // unchanged
+  });
+
+  it('is a no-op for out-of-range index', () => {
+    useCanvasStore.getState().addWaypoint({ x: 100, y: 200, zoom: 1.5 });
+
+    useCanvasStore.getState().updateWaypoint(5, { label: 'Should not apply' });
+
+    expect(useCanvasStore.getState().waypoints[0]?.label).toBe('View 1');
+  });
+
+  it('is a no-op for negative index', () => {
+    useCanvasStore.getState().addWaypoint({ x: 100, y: 200, zoom: 1.5 });
+
+    useCanvasStore.getState().updateWaypoint(-1, { label: 'Should not apply' });
+
+    expect(useCanvasStore.getState().waypoints[0]?.label).toBe('View 1');
   });
 });
 
@@ -308,5 +390,21 @@ describe('exitPresentation', () => {
     useCanvasStore.getState().exitPresentation();
 
     expect(useCanvasStore.getState().waypoints).toHaveLength(2);
+  });
+});
+
+// ── waypointPanelOpen ──────────────────────────────────────
+
+describe('waypointPanelOpen', () => {
+  it('defaults to false', () => {
+    expect(useCanvasStore.getState().waypointPanelOpen).toBe(false);
+  });
+
+  it('can be toggled via setWaypointPanelOpen', () => {
+    useCanvasStore.getState().setWaypointPanelOpen(true);
+    expect(useCanvasStore.getState().waypointPanelOpen).toBe(true);
+
+    useCanvasStore.getState().setWaypointPanelOpen(false);
+    expect(useCanvasStore.getState().waypointPanelOpen).toBe(false);
   });
 });

@@ -73,6 +73,9 @@ const IMMUTABLE_FIELDS = new Set(['id', 'kind', 'meta']);
 /** Shared history manager instance (lives outside Zustand to avoid serialization). */
 const historyManager = new HistoryManager();
 
+/** Auto-incrementing counter for default waypoint labels ("View 1", "View 2", …). */
+let waypointCounter = 0;
+
 /** Creates a ProtocolOperation with unique ID and current timestamp. */
 function createOperation(
   type: ProtocolOperation['type'],
@@ -296,6 +299,7 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
     lastUsedStyle: { ...DEFAULT_EXPRESSION_STYLE },
     waypoints: [] as CameraWaypoint[],
     presentationIndex: -1,
+    waypointPanelOpen: false,
 
     // ── Content mutations (emit ProtocolOperations + push snapshots) ──
 
@@ -1114,9 +1118,25 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
 
     addWaypoint: (waypoint?: CameraWaypoint) => {
       const { camera } = get();
-      const wp: CameraWaypoint = waypoint ?? { x: camera.x, y: camera.y, zoom: camera.zoom };
+      waypointCounter += 1;
+      const defaultLabel = `View ${waypointCounter}`;
+      const wp: CameraWaypoint = waypoint
+        ? { ...waypoint, label: waypoint.label ?? defaultLabel }
+        : { x: camera.x, y: camera.y, zoom: camera.zoom, label: defaultLabel };
       set((state) => {
         state.waypoints.push(wp);
+      });
+    },
+
+    updateWaypoint: (index: number, partial: Partial<CameraWaypoint>) => {
+      const { waypoints } = get();
+      if (index < 0 || index >= waypoints.length) return;
+      set((state) => {
+        const wp = state.waypoints[index]!;
+        if (partial.x !== undefined) wp.x = partial.x;
+        if (partial.y !== undefined) wp.y = partial.y;
+        if (partial.zoom !== undefined) wp.zoom = partial.zoom;
+        if (partial.label !== undefined) wp.label = partial.label;
       });
     },
 
@@ -1135,6 +1155,7 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
     },
 
     clearWaypoints: () => {
+      waypointCounter = 0;
       set((state) => {
         state.waypoints = [];
         state.presentationIndex = -1;
@@ -1180,5 +1201,19 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
         state.presentationIndex = -1;
       });
     },
+
+    setWaypointPanelOpen: (open: boolean) => {
+      set((state) => {
+        state.waypointPanelOpen = open;
+      });
+    },
   })),
 );
+
+/**
+ * Reset waypoint counter. Exported for test cleanup only.
+ * @internal
+ */
+export function _resetWaypointCounter(): void {
+  waypointCounter = 0;
+}

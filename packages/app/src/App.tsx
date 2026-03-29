@@ -22,7 +22,7 @@ import { StylePanel } from './components/panels/StylePanel.js';
 import { ThemeToggle } from './components/panels/ThemeToggle.js';
 import { ExportMenu } from './components/panels/ExportMenu.js';
 import { ZoomControls } from './components/panels/ZoomControls.js';
-import { PresentationBar } from './components/panels/PresentationBar.js';
+import { WaypointPanel } from './components/panels/WaypointPanel.js';
 import { SettingsPanel } from './components/panels/SettingsPanel.js';
 import { ConnectionStatus } from './components/panels/ConnectionStatus.js';
 import { WelcomeScreen } from './components/WelcomeScreen.js';
@@ -38,6 +38,8 @@ export function App() {
   const setSelectedIds = useCanvasStore((s) => s.setSelectedIds);
   const [showSettings, setShowSettings] = useState(false);
   const [showStencilPalette, setShowStencilPalette] = useState(false);
+  const waypointPanelOpen = useCanvasStore((s) => s.waypointPanelOpen);
+  const setWaypointPanelOpen = useCanvasStore((s) => s.setWaypointPanelOpen);
   const gatewayState = useGatewayConnection();
   const { isLoading: agentLoading } = useAgentActionHandler(
     gatewayState.sendMessage,
@@ -107,6 +109,8 @@ export function App() {
       <Toolbar
         onToggleStencilPalette={() => setShowStencilPalette((prev) => !prev)}
         isStencilPaletteOpen={showStencilPalette}
+        onToggleWaypointPanel={() => setWaypointPanelOpen(!waypointPanelOpen)}
+        isWaypointPanelOpen={waypointPanelOpen}
       />
       <StylePanel />
       <ExpressionPalette onInsert={handleInsert} />
@@ -118,7 +122,7 @@ export function App() {
       />
       <AgentSidebar />
       <ZoomControls />
-      <PresentationBar />
+      <WaypointPanel isOpen={waypointPanelOpen} />
       <WelcomeScreen />
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
       {/* Top-left action bar: theme toggle + export menu + settings */}

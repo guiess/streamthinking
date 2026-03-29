@@ -140,15 +140,19 @@ export function useKeyboardShortcuts(
         return;
       }
 
-      // ── Escape: cancel / deselect / close help / exit presentation ──
+      // ── Escape: cancel / deselect / close help / close waypoint panel ──
       if (key === 'Escape') {
         // Close help panel if open
         setShowShortcutsHelp(false);
 
         // Exit presentation mode if active
-        const { presentationIndex } = useCanvasStore.getState();
+        const { presentationIndex, waypointPanelOpen } = useCanvasStore.getState();
         if (presentationIndex >= 0) {
           useCanvasStore.getState().exitPresentation();
+        }
+        // Close waypoint panel if open
+        if (waypointPanelOpen) {
+          useCanvasStore.getState().setWaypointPanelOpen(false);
           return;
         }
 
@@ -163,10 +167,10 @@ export function useKeyboardShortcuts(
         return;
       }
 
-      // ── Presentation mode navigation (arrow keys, no modifier) ──
+      // ── Waypoint navigation (arrow keys, no modifier, panel open) ──
       if (!isModifier && !event.shiftKey && !event.altKey) {
-        const { presentationIndex: presIdx } = useCanvasStore.getState();
-        if (presIdx >= 0) {
+        const { waypointPanelOpen: panelOpen, waypoints } = useCanvasStore.getState();
+        if (panelOpen && waypoints.length > 0) {
           if (key === 'ArrowRight' || key === 'ArrowDown') {
             event.preventDefault();
             useCanvasStore.getState().nextWaypoint();

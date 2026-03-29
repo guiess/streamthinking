@@ -27,6 +27,7 @@ import {
   Ungroup,
   Trash2,
   LayoutGrid,
+  MapPin,
   ArrowUpToLine,
   ArrowDownToLine,
   ArrowUp,
@@ -66,10 +67,14 @@ export interface ToolbarProps {
   onToggleStencilPalette?: () => void;
   /** Whether the stencil palette panel is currently open. */
   isStencilPaletteOpen?: boolean;
+  /** Callback to toggle the waypoint panel. */
+  onToggleWaypointPanel?: () => void;
+  /** Whether the waypoint panel is currently open. */
+  isWaypointPanelOpen?: boolean;
 }
 
 /** Toolbar component — renders a vertical bar on the left side. */
-export function Toolbar({ onToggleStencilPalette, isStencilPaletteOpen }: ToolbarProps = {}) {
+export function Toolbar({ onToggleStencilPalette, isStencilPaletteOpen, onToggleWaypointPanel, isWaypointPanelOpen }: ToolbarProps = {}) {
   const activeTool = useCanvasStore((s) => s.activeTool);
   const setActiveTool = useCanvasStore((s) => s.setActiveTool);
   const lastUsedStyle = useCanvasStore((s) => s.lastUsedStyle);
@@ -167,6 +172,33 @@ export function Toolbar({ onToggleStencilPalette, isStencilPaletteOpen }: Toolba
             <LayoutGrid size={ICON_SIZE} />
           </button>
         </>
+      )}
+
+      {/* Waypoint panel toggle — shown when callback is provided */}
+      {onToggleWaypointPanel && (
+        <button
+          type="button"
+          title="Waypoints (W)"
+          aria-label="Waypoints"
+          aria-pressed={!!isWaypointPanelOpen}
+          data-testid="waypoint-panel-toggle"
+          onClick={onToggleWaypointPanel}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: BUTTON_SIZE,
+            height: BUTTON_SIZE,
+            border: 'none',
+            borderRadius: 6,
+            cursor: 'pointer',
+            backgroundColor: isWaypointPanelOpen ? '#4A90D9' : 'transparent',
+            color: isWaypointPanelOpen ? '#ffffff' : 'var(--text-primary, #333333)',
+            transition: 'background-color 0.15s, color 0.15s',
+          }}
+        >
+          <MapPin size={ICON_SIZE} />
+        </button>
       )}
 
       {/* Group/Ungroup buttons — shown when 2+ expressions selected */}

@@ -49,6 +49,8 @@ export interface CanvasState {
   waypoints: CameraWaypoint[];
   /** Active waypoint index (-1 = not in presentation mode). */
   presentationIndex: number;
+  /** Whether the waypoint panel is open (controls keyboard shortcut behavior). */
+  waypointPanelOpen: boolean;
   /** Log of all protocol operations applied to the canvas. */
   operationLog: ProtocolOperation[];
   /** Last style used for drawing — applied to new expressions. */
@@ -160,6 +162,8 @@ export interface CanvasActions {
   sendBackward: (ids: string[]) => void;
   /** Add a camera waypoint. Snapshots current camera if no argument. */
   addWaypoint: (waypoint?: CameraWaypoint) => void;
+  /** Update a waypoint's properties (label, position, zoom). */
+  updateWaypoint: (index: number, partial: Partial<CameraWaypoint>) => void;
   /** Remove a waypoint by index. */
   removeWaypoint: (index: number) => void;
   /** Clear all waypoints and exit presentation mode. */
@@ -172,4 +176,6 @@ export interface CanvasActions {
   prevWaypoint: () => void;
   /** Exit presentation mode without clearing waypoints. */
   exitPresentation: () => void;
+  /** Set whether the waypoint panel is open. */
+  setWaypointPanelOpen: (open: boolean) => void;
 }

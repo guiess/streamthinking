@@ -8,7 +8,7 @@
  */
 
 // ── State store ────────────────────────────────────────────
-export { useCanvasStore } from './store/canvasStore.js';
+export { useCanvasStore, _resetWaypointCounter } from './store/canvasStore.js';
 export { useAgentStore } from './store/agentStore.js';
 export type { AgentState, AgentActions } from './store/agentStore.js';
 export { useUiStore, applyThemeToDocument, THEME_STORAGE_KEY } from './store/uiStore.js';
