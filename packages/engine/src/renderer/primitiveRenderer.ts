@@ -242,7 +242,7 @@ function renderRectangle(
   } else {
     const options = mapStyleToRoughOptions(expr.style, idToSeed(expr.id));
     const drawable = getOrCreateDrawable(expr, () =>
-      rc.rectangle(0, 0, width, height, options),
+      rc.generator.rectangle(0, 0, width, height, options),
     );
     ctx.save();
     ctx.translate(x, y);
@@ -271,7 +271,7 @@ function renderEllipse(
   } else {
     const options = mapStyleToRoughOptions(expr.style, idToSeed(expr.id));
     const drawable = getOrCreateDrawable(expr, () =>
-      rc.ellipse(width / 2, height / 2, width, height, options),
+      rc.generator.ellipse(width / 2, height / 2, width, height, options),
     );
     ctx.save();
     ctx.translate(x, y);
@@ -305,7 +305,7 @@ function renderDiamond(
       [0, height / 2],
     ];
     const drawable = getOrCreateDrawable(expr, () =>
-      rc.polygon(points, options),
+      rc.generator.polygon(points, options),
     );
     ctx.save();
     ctx.translate(x, y);
@@ -335,7 +335,7 @@ function renderLine(
   }
 
   const drawable = getOrCreateDrawable(expr, () =>
-    rc.linearPath(points, options),
+    rc.generator.linearPath(points, options),
   );
 
   rc.draw(drawable);
@@ -430,7 +430,7 @@ function renderArrow(
   } else {
     // Normal straight arrow
     const drawable = getOrCreateDrawable(expr, () =>
-      rc.linearPath(points, options),
+      rc.generator.linearPath(points, options),
     );
     rc.draw(drawable);
 
