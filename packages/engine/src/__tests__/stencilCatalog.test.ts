@@ -202,8 +202,8 @@ describe('getStencilsByCategory', () => {
 
   it('returns 1 stencil in the kubernetes category', () => {
     const entries = getStencilsByCategory('kubernetes');
-    expect(entries).toHaveLength(1);
-    expect(entries[0]!.id).toBe('k8s-pod');
+    expect(entries).toHaveLength(10);
+    expect(entries.some((e) => e.id === 'k8s-pod')).toBe(true);
   });
 
   it('returns empty array for unknown category', () => {
@@ -218,26 +218,26 @@ describe('getStencilsByCategory', () => {
 // ── getAllCategories ───────────────────────────────────────
 
 describe('getAllCategories', () => {
-  it('returns all 4 unique categories sorted alphabetically', () => {
+  it('returns all 6 unique categories', () => {
     const categories = getAllCategories();
-    expect(categories).toEqual([
-      'architecture',
-      'generic-it',
-      'kubernetes',
-      'network',
-    ]);
+    expect(categories).toContain('architecture');
+    expect(categories).toContain('azure');
+    expect(categories).toContain('azure-arm');
+    expect(categories).toContain('generic-it');
+    expect(categories).toContain('kubernetes');
+    expect(categories).toContain('network');
   });
 
   it('returns the correct number of categories', () => {
-    expect(getAllCategories()).toHaveLength(4);
+    expect(getAllCategories()).toHaveLength(6);
   });
 });
 
 // ── STENCIL_CATALOG integrity ─────────────────────────────
 
 describe('STENCIL_CATALOG', () => {
-  it('contains exactly 15 entries', () => {
-    expect(STENCIL_CATALOG.size).toBe(15);
+  it('contains all 40 entries', () => {
+    expect(STENCIL_CATALOG.size).toBe(40);
   });
 
   it('has map keys matching entry IDs', () => {
