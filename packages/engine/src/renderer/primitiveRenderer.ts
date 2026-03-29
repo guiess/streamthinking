@@ -790,20 +790,25 @@ export function renderLabel(
   if (measured.width <= maxWidth) {
     ctx.fillText(label, x + width / 2, y + height / 2);
   } else {
-    // Simple word wrap
-    const words = label.split(' ');
-    const lines: string[] = [];
-    let currentLine = '';
-    for (const word of words) {
-      const test = currentLine ? `${currentLine} ${word}` : word;
-      if (ctx.measureText(test).width > maxWidth && currentLine) {
-        lines.push(currentLine);
-        currentLine = word;
-      } else {
-        currentLine = test;
+    // Word wrap with newline support
+    const allLines: string[] = [];
+    const paragraphs = label.split('\n');
+    for (const para of paragraphs) {
+      if (!para) { allLines.push(''); continue; }
+      const words = para.split(' ');
+      let currentLine = '';
+      for (const word of words) {
+        const test = currentLine ? `${currentLine} ${word}` : word;
+        if (ctx.measureText(test).width > maxWidth && currentLine) {
+          allLines.push(currentLine);
+          currentLine = word;
+        } else {
+          currentLine = test;
+        }
       }
+      if (currentLine) allLines.push(currentLine);
     }
-    if (currentLine) lines.push(currentLine);
+    const lines = allLines;
 
     const lineHeight = fontSize * LINE_HEIGHT_MULTIPLIER;
     const totalHeight = lines.length * lineHeight;
@@ -856,27 +861,38 @@ export function wrapText(
 ): string[] {
   if (!text) return [];
 
-  const words = text.split(' ');
-  const lines: string[] = [];
-  let currentLine = '';
+  const result: string[] = [];
 
-  for (const word of words) {
-    const testLine = currentLine ? `${currentLine} ${word}` : word;
-    const metrics = ctx.measureText(testLine);
+  // Split on explicit newlines first
+  const paragraphs = text.split('\n');
 
-    if (metrics.width > maxWidth && currentLine) {
-      lines.push(currentLine);
-      currentLine = word;
-    } else {
-      currentLine = testLine;
+  for (const paragraph of paragraphs) {
+    if (!paragraph) {
+      result.push('');
+      continue;
+    }
+
+    const words = paragraph.split(' ');
+    let currentLine = '';
+
+    for (const word of words) {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      const metrics = ctx.measureText(testLine);
+
+      if (metrics.width > maxWidth && currentLine) {
+        result.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    }
+
+    if (currentLine) {
+      result.push(currentLine);
     }
   }
 
-  if (currentLine) {
-    lines.push(currentLine);
-  }
-
-  return lines;
+  return result;
 }
 
 // ── Position offset for point-based shapes ───────────────────
