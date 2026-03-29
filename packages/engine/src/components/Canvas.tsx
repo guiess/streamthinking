@@ -440,9 +440,12 @@ function TextEditor({ expression, initialText, camera, onCommit, onCancel }: Tex
             fontFamily: fontFamily,
             color: color,
             textAlign: textAlign as React.CSSProperties['textAlign'],
+            verticalAlign: 'top',
             background: 'transparent',
             resize: 'none',
             overflow: 'hidden',
+            lineHeight: 1.4,
+            display: 'block',
             lineHeight: 1.4,
           }}
         />
@@ -472,12 +475,14 @@ function TextEditor({ expression, initialText, camera, onCommit, onCancel }: Tex
         fontFamily: fontFamily,
         color: color,
         textAlign: textAlign as React.CSSProperties['textAlign'],
+        verticalAlign: 'top',
         background: background,
         resize: 'none',
         zIndex: 10,
         boxSizing: 'border-box',
         overflow: 'hidden',
         lineHeight: 1.4,
+        display: 'block',
       }}
     />
   );
