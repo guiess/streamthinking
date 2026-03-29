@@ -30,7 +30,7 @@ const DEFAULT_FONT_FAMILY = 'Architects Daughter, cursive';
 const STICKY_NOTE_PADDING = 12;
 
 /** Font size for stencil labels at base 44px icon (px). */
-const STENCIL_LABEL_FONT_SIZE = 8;
+const STENCIL_LABEL_FONT_SIZE = 4;
 
 /** Gap between stencil icon bottom and label text (px). */
 const STENCIL_LABEL_GAP = 4;
