@@ -214,10 +214,9 @@ function resolveShapeLabelKind(expr: VisualExpression): TextConfig {
 function resolveStencilKind(expr: VisualExpression): TextConfig {
   const data = expr.data as { label?: string };
   const fontFamily = expr.style.fontFamily ?? DEFAULT_FONT_FAMILY;
-  // Label font: ~8% of stencil height, clamped between 10 and 24 world pixels
-  const autoSize = Math.round(Math.min(expr.size.width, expr.size.height) * 0.08);
-  const fontSize = Math.max(10, Math.min(autoSize, 24));
-  const gap = Math.max(2, fontSize * 0.3);
+  // Label font: 15% of stencil's smaller dimension (no clamp — zoom handles screen size)
+  const fontSize = Math.max(10, Math.round(Math.min(expr.size.width, expr.size.height) * 0.15));
+  const gap = fontSize * 0.3;
 
   return {
     text: data.label ?? '',
