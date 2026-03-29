@@ -10,7 +10,7 @@
  */
 
 import { useCallback, useState } from 'react';
-import { Canvas, useCanvasStore, morphExpression } from '@infinicanvas/engine';
+import { Canvas, useCanvasStore, morphExpression, screenToWorld } from '@infinicanvas/engine';
 import type { VisualExpression, ExpressionKind } from '@infinicanvas/protocol';
 import { Toolbar } from './components/toolbar/Toolbar.js';
 import { ExpressionPalette } from './components/toolbar/ExpressionPalette.js';
@@ -34,6 +34,7 @@ export function App() {
   const updateExpression = useCanvasStore((s) => s.updateExpression);
   const expressions = useCanvasStore((s) => s.expressions);
   const selectedIds = useCanvasStore((s) => s.selectedIds);
+  const setSelectedIds = useCanvasStore((s) => s.setSelectedIds);
   const [showSettings, setShowSettings] = useState(false);
   const [showStencilPalette, setShowStencilPalette] = useState(false);
   const gatewayState = useGatewayConnection();
@@ -50,9 +51,24 @@ export function App() {
   /** Insert a new expression from the palette. */
   const handleInsert = useCallback(
     (expression: VisualExpression) => {
-      addExpression(expression);
+      // Place at viewport center with slight random offset to avoid stacking
+      const { camera } = useCanvasStore.getState();
+      const cx = window.innerWidth / 2;
+      const cy = window.innerHeight / 2;
+      const [worldX, worldY] = screenToWorld(cx, cy, camera);
+      const offset = (Math.random() - 0.5) * 40;
+
+      const centered = {
+        ...expression,
+        position: {
+          x: worldX - expression.size.width / 2 + offset,
+          y: worldY - expression.size.height / 2 + offset,
+        },
+      };
+      addExpression(centered);
+      setSelectedIds(new Set([centered.id]));
     },
-    [addExpression],
+    [addExpression, setSelectedIds],
   );
 
   /** Morph an expression to a new kind. */

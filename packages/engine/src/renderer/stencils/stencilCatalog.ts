@@ -34,6 +34,15 @@ import {
   AZURE_SQL_SVG,
   AZURE_FUNCTIONS_SVG,
   AZURE_VNET_SVG,
+  AZURE_COSMOSDB_SVG,
+  AZURE_REDIS_SVG,
+  AZURE_DNS_SVG,
+  AZURE_FRONTDOOR_SVG,
+  AZURE_TRAFFIC_MANAGER_SVG,
+  AZURE_MONITOR_SVG,
+  AZURE_PRIVATE_ENDPOINT_SVG,
+  AZURE_NSP_SVG,
+  PROMETHEUS_SVG,
 } from './svgs/azure.js';
 import {
   K8S_POD_SVG,
@@ -204,6 +213,15 @@ export const STENCIL_CATALOG: Map<string, StencilEntry> = new Map([
       defaultSize: { width: 64, height: 64 },
     },
   ],
+  ['azure-cosmosdb', { id: 'azure-cosmosdb', category: 'azure', label: 'Cosmos DB', svgContent: AZURE_COSMOSDB_SVG, defaultSize: ICON_SIZE }],
+  ['azure-redis', { id: 'azure-redis', category: 'azure', label: 'Redis Cache', svgContent: AZURE_REDIS_SVG, defaultSize: ICON_SIZE }],
+  ['azure-dns', { id: 'azure-dns', category: 'azure', label: 'DNS', svgContent: AZURE_DNS_SVG, defaultSize: ICON_SIZE }],
+  ['azure-frontdoor', { id: 'azure-frontdoor', category: 'azure', label: 'Front Door', svgContent: AZURE_FRONTDOOR_SVG, defaultSize: ICON_SIZE }],
+  ['azure-traffic-manager', { id: 'azure-traffic-manager', category: 'azure', label: 'Traffic Manager', svgContent: AZURE_TRAFFIC_MANAGER_SVG, defaultSize: ICON_SIZE }],
+  ['azure-monitor', { id: 'azure-monitor', category: 'azure', label: 'Monitor', svgContent: AZURE_MONITOR_SVG, defaultSize: ICON_SIZE }],
+  ['private-endpoint', { id: 'private-endpoint', category: 'azure', label: 'Private Endpoint', svgContent: AZURE_PRIVATE_ENDPOINT_SVG, defaultSize: ICON_SIZE }],
+  ['nsp', { id: 'nsp', category: 'azure', label: 'Network Security Perimeter', svgContent: AZURE_NSP_SVG, defaultSize: { width: 200, height: 150 } }],
+  ['prometheus', { id: 'prometheus', category: 'generic-it', label: 'Prometheus', svgContent: PROMETHEUS_SVG, defaultSize: ICON_SIZE }],
 
   // ── Kubernetes (Sub-ticket C) ───────────────────────────
   [

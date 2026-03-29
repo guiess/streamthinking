@@ -186,11 +186,11 @@ describe('getStencilsByCategory', () => {
     expect(ids).toEqual(['firewall', 'load-balancer', 'router', 'server', 'switch']);
   });
 
-  it('returns 6 stencils in the generic-it category', () => {
+  it('returns 7 stencils in the generic-it category', () => {
     const entries = getStencilsByCategory('generic-it');
-    expect(entries).toHaveLength(6);
+    expect(entries).toHaveLength(7);
     const ids = entries.map((e) => e.id).sort();
-    expect(ids).toEqual(['api', 'browser', 'cache', 'database', 'queue', 'user']);
+    expect(ids).toEqual(['api', 'browser', 'cache', 'database', 'prometheus', 'queue', 'user']);
   });
 
   it('returns 3 stencils in the architecture category', () => {
@@ -237,7 +237,7 @@ describe('getAllCategories', () => {
 
 describe('STENCIL_CATALOG', () => {
   it('contains all 40 entries', () => {
-    expect(STENCIL_CATALOG.size).toBe(40);
+    expect(STENCIL_CATALOG.size).toBe(49);
   });
 
   it('has map keys matching entry IDs', () => {

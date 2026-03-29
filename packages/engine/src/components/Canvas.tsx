@@ -23,10 +23,13 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts.js';
 import { useTouchGestures } from '../hooks/useTouchGestures.js';
 import { useMetadataTooltip, formatRelativeTime } from '../hooks/useMetadataTooltip.js';
 import { useCanvasStore } from '../store/canvasStore.js';
-import { worldToScreen } from '../camera.js';
+import { worldToScreen, screenToWorld } from '../camera.js';
 import { createRenderLoop } from '../renderer/renderLoop.js';
 import type { RenderLoop } from '../renderer/renderLoop.js';
 import type { VisualExpression } from '@infinicanvas/protocol';
+import { getStencil } from '../renderer/stencils/index.js';
+import { DEFAULT_EXPRESSION_STYLE } from '@infinicanvas/protocol';
+import { nanoid } from 'nanoid';
 
 /** Minimum canvas dimensions to prevent zero-size or negative canvas. */
 const MIN_WIDTH = 1;
@@ -170,9 +173,50 @@ function CanvasInner() {
     };
   }, [updateCanvasSize]);
 
+  /** Handle stencil drops from the StencilPalette. */
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const stencilId = e.dataTransfer.getData('application/x-infinicanvas-stencil');
+    if (!stencilId) return;
+
+    const entry = getStencil(stencilId);
+    if (!entry) return;
+
+    const { camera } = useCanvasStore.getState();
+    const [worldX, worldY] = screenToWorld(e.clientX, e.clientY, camera);
+
+    const expression: VisualExpression = {
+      id: nanoid(),
+      kind: 'stencil',
+      position: { x: worldX - entry.defaultSize.width / 2, y: worldY - entry.defaultSize.height / 2 },
+      size: { ...entry.defaultSize },
+      angle: 0,
+      style: { ...DEFAULT_EXPRESSION_STYLE },
+      meta: {
+        author: { type: 'human', id: 'local-user', name: 'User' },
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        tags: [],
+        locked: false,
+      },
+      data: { kind: 'stencil' as const, stencilId: entry.id, category: entry.category, label: entry.label },
+    };
+
+    useCanvasStore.getState().addExpression(expression);
+    useCanvasStore.getState().setSelectedIds(new Set([expression.id]));
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes('application/x-infinicanvas-stencil')) {
+      e.preventDefault();
+    }
+  }, []);
+
   return (
     <div
       ref={containerRef}
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
       style={{
         width: '100vw',
         height: '100vh',
