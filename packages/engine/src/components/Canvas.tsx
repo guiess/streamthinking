@@ -385,11 +385,7 @@ function TextEditor({ expression, initialText, camera, onCommit, onCancel }: Tex
     doCommit();
   };
 
-  // Compute vertical padding for middle-aligned text (shape labels)
-  const verticalPadding = verticalAlign === 'middle'
-    ? Math.max((Math.max(screenHeight, 32) - scaledFontSize * 1.4) / 2, 4)
-    : 4;
-
+  // No padding — the text position should match the renderer exactly
   return (
     <textarea
       ref={textareaRef}
@@ -401,9 +397,10 @@ function TextEditor({ expression, initialText, camera, onCommit, onCancel }: Tex
         position: 'absolute',
         left: `${screenPos.x}px`,
         top: `${screenPos.y}px`,
-        width: `${Math.max(screenWidth, 100)}px`,
-        height: `${Math.max(screenHeight, 32)}px`,
-        padding: `${verticalPadding}px 8px`,
+        width: `${Math.max(screenWidth, 80)}px`,
+        height: `${Math.max(screenHeight, 24)}px`,
+        padding: 0,
+        margin: 0,
         border: '1px dashed #4A90D9',
         borderRadius: '2px',
         outline: 'none',
