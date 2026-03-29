@@ -763,6 +763,17 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
           const expr = state.expressions[id];
           if (expr) {
             expr.style = { ...expr.style, ...validatedStyle } as ExpressionStyle;
+
+            // For text expressions, also update data.fontSize/fontFamily (they store font in data)
+            if (expr.kind === 'text') {
+              const data = expr.data as Record<string, unknown>;
+              if (validatedStyle.fontSize !== undefined) {
+                data.fontSize = validatedStyle.fontSize;
+              }
+              if (validatedStyle.fontFamily !== undefined) {
+                data.fontFamily = validatedStyle.fontFamily;
+              }
+            }
           }
         }
 
