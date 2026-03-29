@@ -10,7 +10,7 @@
  * @module
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import rough from 'roughjs';
 import { ErrorBoundary } from './ErrorBoundary.js';
 import { ShortcutsHelpPanel } from './ShortcutsHelpPanel.js';
@@ -385,12 +385,23 @@ function TextEditor({ expression, initialText, camera, onCommit, onCancel }: Tex
     doCommit();
   };
 
-  // For middle-aligned text (shape labels), compute padding to vertically center
+  // For middle-aligned text (shape labels), dynamically center based on line count
+  const [lineCount, setLineCount] = useState(1);
   const effectiveHeight = Math.max(screenHeight, 24);
   const textLineHeight = scaledFontSize * 1.4;
+  const totalTextHeight = textLineHeight * lineCount;
   const verticalPad = verticalAlign === 'middle'
-    ? Math.max(0, (effectiveHeight - textLineHeight) / 2)
+    ? Math.max(0, (effectiveHeight - totalTextHeight) / 2)
     : 0;
+
+  const handleInput = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const lines = textarea.value.split('\n').length;
+    // Also account for wrapping: estimate wrapped lines from scrollHeight
+    const wrappedLines = Math.max(lines, Math.round(textarea.scrollHeight / (scaledFontSize * 1.4)));
+    setLineCount(Math.max(1, wrappedLines));
+  }, [scaledFontSize]);
 
   return (
     <textarea
@@ -399,6 +410,7 @@ function TextEditor({ expression, initialText, camera, onCommit, onCancel }: Tex
       defaultValue={initialText}
       onKeyDown={handleKeyDown}
       onBlur={handleBlur}
+      onInput={handleInput}
       style={{
         position: 'absolute',
         left: `${screenPos.x}px`,
