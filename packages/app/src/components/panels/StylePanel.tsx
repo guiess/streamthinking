@@ -156,6 +156,7 @@ export function StylePanel() {
   const activeTool = useCanvasStore((s) => s.activeTool);
   const lastUsedStyle = useCanvasStore((s) => s.lastUsedStyle);
   const setLastUsedStyle = useCanvasStore((s) => s.setLastUsedStyle);
+  const updateExpression = useCanvasStore((s) => s.updateExpression);
 
   // Drawing mode: tool active + nothing selected → show lastUsedStyle
   const isDrawingMode = selectedIds.size === 0 && activeTool !== 'select';
@@ -187,7 +188,6 @@ export function StylePanel() {
   }
 
   // Arrowhead controls — detect if selected expression is an arrow/line
-  const updateExpression = useCanvasStore((s) => s.updateExpression);
   const isArrowSelected = !isDrawingMode && firstExpr && (firstExpr.kind === 'arrow' || firstExpr.kind === 'line');
   const arrowData = isArrowSelected ? (firstExpr.data as { startArrowhead?: string | boolean; endArrowhead?: string | boolean }) : null;
 
