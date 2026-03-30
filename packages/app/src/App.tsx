@@ -13,7 +13,6 @@ import { useCallback, useState } from 'react';
 import { Canvas, useCanvasStore, morphExpression, screenToWorld } from '@infinicanvas/engine';
 import type { VisualExpression, ExpressionKind } from '@infinicanvas/protocol';
 import { Toolbar } from './components/toolbar/Toolbar.js';
-import { ExpressionPalette } from './components/toolbar/ExpressionPalette.js';
 import { StencilPalette } from './components/toolbar/StencilPalette.js';
 import { AgentActions } from './components/toolbar/AgentActions.js';
 import type { AgentActionType } from './components/toolbar/AgentActions.js';
@@ -118,7 +117,6 @@ export function App() {
         isWaypointPanelOpen={waypointPanelOpen}
       />
       <StylePanel />
-      <ExpressionPalette onInsert={handleInsert} />
       <StencilPalette onInsert={handleInsert} isOpen={showStencilPalette} />
       <AgentActions
         selectedExpressions={selectedExpressions}

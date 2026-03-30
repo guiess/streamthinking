@@ -15,7 +15,6 @@ import { screenToWorld } from '../camera.js';
 import { RectangleTool } from '../tools/RectangleTool.js';
 import { EllipseTool } from '../tools/EllipseTool.js';
 import { DiamondTool } from '../tools/DiamondTool.js';
-import { LineTool } from '../tools/LineTool.js';
 import { ArrowTool } from '../tools/ArrowTool.js';
 import { FreehandTool } from '../tools/FreehandTool.js';
 import { TextTool } from '../tools/TextTool.js';
@@ -47,7 +46,6 @@ export function useDrawingInteraction(
       rectangle: new RectangleTool(),
       ellipse: new EllipseTool(),
       diamond: new DiamondTool(),
-      line: new LineTool(),
       arrow: new ArrowTool(),
       freehand: new FreehandTool(),
       text: textTool,
@@ -99,7 +97,7 @@ export function useDrawingInteraction(
 
       if (handler) {
         handler.onPointerMove(world.x, world.y, e);
-      } else if (activeTool === 'arrow' || activeTool === 'line') {
+      } else if (activeTool === 'arrow') {
         // Forward hover moves for snap preview even when not drawing
         const tool = toolHandlers[activeTool];
         if (tool) {

@@ -48,7 +48,6 @@ const TOOLS: ToolDefinition[] = [
   { type: 'rectangle', icon: Square, label: 'Rectangle (R)' },
   { type: 'ellipse', icon: Circle, label: 'Ellipse (O)' },
   { type: 'diamond', icon: Diamond, label: 'Diamond (D)' },
-  { type: 'line', icon: Minus, label: 'Line (L)' },
   { type: 'arrow', icon: ArrowRight, label: 'Arrow (A)' },
   { type: 'freehand', icon: Pencil, label: 'Pen (P)' },
   { type: 'text', icon: Type, label: 'Text (T)' },
