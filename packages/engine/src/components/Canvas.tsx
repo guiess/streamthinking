@@ -473,11 +473,15 @@ function TextEditor({ expression, initialText, camera, editorTextRef, onCommit, 
             // Shrink font to fit inside shape
             let fs = scaledFontSize;
             el.style.fontSize = `${fs}px`;
+            el.style.height = 'auto';
             while (el.scrollHeight > effectiveHeight * 0.9 && fs > 6) {
               fs -= 1;
               el.style.fontSize = `${fs}px`;
+              el.style.height = 'auto';
             }
             currentFontSizeRef.current = fs;
+            // Grow textarea to fit content (for multiline)
+            el.style.height = `${el.scrollHeight}px`;
           }}
           style={{
             width: '85%',
