@@ -15,7 +15,6 @@
 
 import type { VisualExpression, MindMapData, MindMapBranch } from '@infinicanvas/protocol';
 import type { RoughCanvas } from 'roughjs/bin/canvas.js';
-import type { Options } from 'roughjs/bin/core.js';
 import { mapStyleToRoughOptions } from '../styleMapper.js';
 import { registerCompositeRenderer } from '../compositeRegistry.js';
 

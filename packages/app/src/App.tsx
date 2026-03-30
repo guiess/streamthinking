@@ -78,7 +78,7 @@ export function App() {
     [addExpression, setSelectedIds],
   );
 
-  /** Morph an expression to a new kind. */
+  // @ts-expect-error handleMorph reserved for future context menu integration
   const handleMorph = useCallback(
     (expressionId: string, toKind: ExpressionKind) => {
       const expr = expressions[expressionId];

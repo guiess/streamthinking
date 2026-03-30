@@ -16,7 +16,6 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { createMcpServer } from './server.js';
 import { createGatewayClient, type IGatewayClient } from './gatewayClient.js';
-import { MCP_AUTHOR } from './defaults.js';
 
 /** Options for starting the MCP server programmatically. */
 export interface StartServerOptions {

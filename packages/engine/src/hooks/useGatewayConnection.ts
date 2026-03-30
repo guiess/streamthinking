@@ -79,6 +79,7 @@ interface StateSyncMessage {
   expressions: VisualExpression[];
   expressionOrder: string[];
   waypoints?: Array<{ x: number; y: number; zoom: number; label?: string }>;
+  agents?: unknown[];
 }
 
 interface OperationBroadcast {
@@ -293,7 +294,7 @@ export function createGatewayConnection(
           ? message.expressions
           : Object.values(message.expressions);
         useCanvasStore.getState().replaceState(
-          exprs,
+          exprs as VisualExpression[],
           message.expressionOrder,
         );
         // Restore waypoints from the gateway session
@@ -309,7 +310,7 @@ export function createGatewayConnection(
           const agentStore = useAgentStore.getState();
           agentStore.clearAgents();
           for (const agent of message.agents) {
-            agentStore.addAgent(agent);
+            agentStore.addAgent(agent as Parameters<typeof agentStore.addAgent>[0]);
           }
         }
         // Reset log tracking since state was replaced

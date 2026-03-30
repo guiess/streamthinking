@@ -214,7 +214,7 @@ export class GatewayClient implements IGatewayClient {
     return new Promise((resolve, reject) => {
       let settled = false;
 
-      const settle = (fn: (v?: unknown) => void, value?: unknown) => {
+      const settle = (fn: (v?: any) => void, value?: unknown) => {
         if (settled) return;
         settled = true;
         clearTimeout(timeout);

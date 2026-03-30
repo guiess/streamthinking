@@ -65,7 +65,7 @@ describe('ExpressionPalette', () => {
     fireEvent.click(getByText('Flowchart'));
     expect(onInsert).toHaveBeenCalledTimes(1);
 
-    const expr: VisualExpression = onInsert.mock.calls[0][0];
+    const expr: VisualExpression = onInsert.mock.calls[0]![0];
     expect(expr.kind).toBe('flowchart');
     expect(flowchartDataSchema.safeParse(expr.data).success).toBe(true);
   });
@@ -80,7 +80,7 @@ describe('ExpressionPalette', () => {
     fireEvent.click(getByText('Sequence Diagram'));
     expect(onInsert).toHaveBeenCalledTimes(1);
 
-    const expr: VisualExpression = onInsert.mock.calls[0][0];
+    const expr: VisualExpression = onInsert.mock.calls[0]![0];
     expect(expr.kind).toBe('sequence-diagram');
     expect(sequenceDiagramDataSchema.safeParse(expr.data).success).toBe(true);
   });
@@ -95,7 +95,7 @@ describe('ExpressionPalette', () => {
     fireEvent.click(getByText('Mind Map'));
     expect(onInsert).toHaveBeenCalledTimes(1);
 
-    const expr: VisualExpression = onInsert.mock.calls[0][0];
+    const expr: VisualExpression = onInsert.mock.calls[0]![0];
     expect(expr.kind).toBe('mind-map');
     expect(mindMapDataSchema.safeParse(expr.data).success).toBe(true);
   });
@@ -110,7 +110,7 @@ describe('ExpressionPalette', () => {
     fireEvent.click(getByText('Reasoning Chain'));
     expect(onInsert).toHaveBeenCalledTimes(1);
 
-    const expr: VisualExpression = onInsert.mock.calls[0][0];
+    const expr: VisualExpression = onInsert.mock.calls[0]![0];
     expect(expr.kind).toBe('reasoning-chain');
     expect(reasoningChainDataSchema.safeParse(expr.data).success).toBe(true);
   });
@@ -125,7 +125,7 @@ describe('ExpressionPalette', () => {
     fireEvent.click(getByText('Kanban'));
     expect(onInsert).toHaveBeenCalledTimes(1);
 
-    const expr: VisualExpression = onInsert.mock.calls[0][0];
+    const expr: VisualExpression = onInsert.mock.calls[0]![0];
     expect(expr.kind).toBe('kanban');
     expect(kanbanDataSchema.safeParse(expr.data).success).toBe(true);
   });
@@ -140,7 +140,7 @@ describe('ExpressionPalette', () => {
     fireEvent.click(getByText('Table'));
     expect(onInsert).toHaveBeenCalledTimes(1);
 
-    const expr: VisualExpression = onInsert.mock.calls[0][0];
+    const expr: VisualExpression = onInsert.mock.calls[0]![0];
     expect(expr.kind).toBe('table');
     expect(tableDataSchema.safeParse(expr.data).success).toBe(true);
   });
@@ -155,7 +155,7 @@ describe('ExpressionPalette', () => {
     fireEvent.click(getByText('Roadmap'));
     expect(onInsert).toHaveBeenCalledTimes(1);
 
-    const expr: VisualExpression = onInsert.mock.calls[0][0];
+    const expr: VisualExpression = onInsert.mock.calls[0]![0];
     expect(expr.kind).toBe('roadmap');
     expect(roadmapDataSchema.safeParse(expr.data).success).toBe(true);
   });
@@ -170,7 +170,7 @@ describe('ExpressionPalette', () => {
     fireEvent.click(getByText('Code Block'));
     expect(onInsert).toHaveBeenCalledTimes(1);
 
-    const expr: VisualExpression = onInsert.mock.calls[0][0];
+    const expr: VisualExpression = onInsert.mock.calls[0]![0];
     expect(expr.kind).toBe('code-block');
     expect(codeBlockDataSchema.safeParse(expr.data).success).toBe(true);
   });
@@ -185,7 +185,7 @@ describe('ExpressionPalette', () => {
     fireEvent.click(getByText('Slide'));
     expect(onInsert).toHaveBeenCalledTimes(1);
 
-    const expr: VisualExpression = onInsert.mock.calls[0][0];
+    const expr: VisualExpression = onInsert.mock.calls[0]![0];
     expect(expr.kind).toBe('slide');
     expect(slideDataSchema.safeParse(expr.data).success).toBe(true);
   });
@@ -200,8 +200,8 @@ describe('ExpressionPalette', () => {
     fireEvent.click(getByText('Flowchart'));
     fireEvent.click(getByText('Mind Map'));
 
-    const expr1 = onInsert.mock.calls[0][0] as VisualExpression;
-    const expr2 = onInsert.mock.calls[1][0] as VisualExpression;
+    const expr1 = onInsert.mock.calls[0]![0] as VisualExpression;
+    const expr2 = onInsert.mock.calls[1]![0] as VisualExpression;
     expect(expr1.id).not.toBe(expr2.id);
   });
 

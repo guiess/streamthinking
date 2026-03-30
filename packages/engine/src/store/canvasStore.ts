@@ -318,10 +318,6 @@ function findBestAnchor(
   return { anchor, point, ratio };
 }
 
-function clampValue(v: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, v));
-}
-
 export const useCanvasStore = create<CanvasState & CanvasActions>()(
   immer((set, get) => ({
     // ── Initial state ────────────────────────────────────────

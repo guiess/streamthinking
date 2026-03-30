@@ -11,7 +11,7 @@
  * @module
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useCanvasStore } from '@infinicanvas/engine';
 import type { VisualExpression } from '@infinicanvas/protocol';
 import type { AgentActionType } from '../components/toolbar/AgentActions.js';
@@ -63,7 +63,7 @@ export function generateRequestId(): string {
  * question) and returns the first non-empty string found.
  */
 export function extractLabel(expr: VisualExpression): string | undefined {
-  const d = expr.data as Record<string, unknown>;
+  const d = expr.data as unknown as Record<string, unknown>;
   for (const key of ['title', 'content', 'text', 'label', 'centralTopic', 'question']) {
     if (typeof d[key] === 'string' && d[key]) {
       return d[key] as string;

@@ -102,7 +102,7 @@ export function useInlineEditor(
     const config = EDITABLE_KINDS[expression.kind];
     if (!config) return '';
 
-    const data = expression.data as Record<string, unknown>;
+    const data = expression.data as unknown as Record<string, unknown>;
     const value = data[config.field];
     const existingText = typeof value === 'string' ? value : '';
     return existingText || initialChar;
@@ -137,10 +137,10 @@ export function useInlineEditor(
         state.deleteExpressions([id]);
       } else {
         // Shapes: remove the label (set to undefined)
-        const updatedData = { ...expression.data } as Record<string, unknown>;
+        const updatedData = { ...expression.data } as unknown as Record<string, unknown>;
         delete updatedData[config.field];
         state.updateExpression(id, {
-          data: updatedData as typeof expression.data,
+          data: updatedData as unknown as typeof expression.data,
         });
       }
     } else {

@@ -42,9 +42,6 @@ const ANSWER_HEIGHT = 50;
 /** Arrowhead size for downward arrows. */
 const ARROWHEAD_SIZE = 8;
 
-/** Arrow line length between cards. */
-const ARROW_LENGTH = CARD_GAP - 8;
-
 /** Font sizes. */
 const TITLE_FONT_SIZE = 14;
 const STEP_TITLE_FONT_SIZE = 13;

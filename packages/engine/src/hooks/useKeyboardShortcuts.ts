@@ -87,7 +87,7 @@ export interface UseKeyboardShortcutsOptions {
    * Callback to start inline editing on a selected expression.
    * Provided by useInlineEditor. If not provided, type-to-edit is disabled.
    */
-  startEditing?: (id: string) => void;
+  startEditing?: (id: string, initialChar?: string) => void;
 }
 
 /** Return value of the keyboard shortcuts hook. */
@@ -315,7 +315,7 @@ export function useKeyboardShortcuts(
 
       // ── Type-to-edit: printable key with selected shape ──
       if (!isModifier && key.length === 1 && !event.altKey) {
-        const { selectedIds, activeTool } = useCanvasStore.getState();
+        const { selectedIds } = useCanvasStore.getState();
         if (selectedIds.size === 1 && options.startEditing) {
           const id = selectedIds.values().next().value;
           if (id) {

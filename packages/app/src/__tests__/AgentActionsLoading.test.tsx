@@ -10,7 +10,7 @@
  * @module
  */
 
-import { render, cleanup, fireEvent } from '@testing-library/react';
+import { render, cleanup } from '@testing-library/react';
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { AgentActions } from '../components/toolbar/AgentActions.js';
 import type { VisualExpression, ExpressionKind } from '@infinicanvas/protocol';

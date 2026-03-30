@@ -147,7 +147,7 @@ function renderExpressionToSvg(expr: VisualExpression): string {
     }
 
     case 'text': {
-      const data = expr.data as { kind: 'text'; content: string };
+      const data = expr.data as unknown as { kind: 'text'; content: string };
       const fontSize = expr.style.fontSize ?? 16;
       return `<text x="${x}" y="${y + fontSize}" font-size="${fontSize}" fill="${stroke}">${escapeXml(data.content)}</text>`;
     }

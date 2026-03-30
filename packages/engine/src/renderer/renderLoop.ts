@@ -12,7 +12,6 @@ import type { RoughCanvas } from 'roughjs/bin/canvas.js';
 import type { Camera } from '../types/index.js';
 import type { DrawPreview } from '../tools/BaseTool.js';
 import { applyTransform } from '../camera.js';
-import { renderGrid } from './gridRenderer.js';
 import { renderExpressions } from './primitiveRenderer.js';
 import { renderSelection } from './selectionRenderer.js';
 import { renderDrawPreview } from './drawPreviewRenderer.js';

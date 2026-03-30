@@ -10,7 +10,7 @@
  */
 
 import { render, cleanup, fireEvent } from '@testing-library/react';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { MorphContextMenu } from '../components/contextmenu/MorphContextMenu.js';
 import type { VisualExpression } from '@infinicanvas/protocol';
 import { DEFAULT_EXPRESSION_STYLE } from '@infinicanvas/protocol';

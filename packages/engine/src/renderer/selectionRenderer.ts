@@ -112,7 +112,6 @@ function renderPointHandles(
   // but data.points don't — skip handles to avoid stale positions
   const data = expr.data as { points?: [number, number][] };
   if (data.points && data.points.length > 0) {
-    const firstPoint = data.points[0];
     const expectedMinX = Math.min(...data.points.map(p => p[0]));
     const expectedMinY = Math.min(...data.points.map(p => p[1]));
     if (Math.abs(expr.position.x - expectedMinX) > 0.5 ||

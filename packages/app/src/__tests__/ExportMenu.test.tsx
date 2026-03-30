@@ -10,7 +10,7 @@
  */
 
 import { render, cleanup, fireEvent } from '@testing-library/react';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { ExportMenu } from '../components/panels/ExportMenu.js';
 
 describe('ExportMenu', () => {

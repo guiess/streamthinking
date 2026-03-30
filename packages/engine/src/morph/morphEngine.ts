@@ -207,7 +207,7 @@ function tableToFlowchart(data: ExpressionData): ExpressionData {
     for (const part of connParts) {
       const match = part.match(/^→\s*(.+?)(?:\s*\((.+)\))?$/);
       if (match) {
-        const targetLabel = match[1].trim();
+        const targetLabel = match[1]!.trim();
         const edgeLabel = match[2]?.trim();
         const toId = nodeIdMap.get(targetLabel);
         if (toId) {
@@ -331,7 +331,7 @@ function tableToMindMap(data: ExpressionData): ExpressionData {
   let centralTopic = 'Root';
   for (const parent of allParents) {
     if (!allTopics.has(parent)) {
-      centralTopic = parent;
+      centralTopic = parent ?? 'Root';
       break;
     }
   }
@@ -339,8 +339,8 @@ function tableToMindMap(data: ExpressionData): ExpressionData {
   // Build a map of parent → children topics
   const childrenMap = new Map<string, string[]>();
   for (const row of table.rows) {
-    const topic = row[topicIdx];
-    const parent = row[parentIdx];
+    const topic = row[topicIdx] ?? '';
+    const parent = row[parentIdx] ?? '';
     const children = childrenMap.get(parent) ?? [];
     children.push(topic);
     childrenMap.set(parent, children);
@@ -465,8 +465,8 @@ function flowchartToReasoningChain(data: ExpressionData): ExpressionData {
   }
 
   // First node is the question, last is the answer, middle are steps
-  const question = path[0].label;
-  const finalAnswer = path.length > 1 ? path[path.length - 1].label : '';
+  const question = path[0]!.label;
+  const finalAnswer = path.length > 1 ? path[path.length - 1]!.label : '';
   const stepNodes = path.length > 2 ? path.slice(1, -1) : [];
 
   const result: ReasoningChainData = {

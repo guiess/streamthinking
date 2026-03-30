@@ -55,7 +55,7 @@ const flowchartExpr = makeExpression('flowchart', {
 
 const textExpr = makeExpression('text', {
   kind: 'text',
-  content: 'Hello world',
+  text: 'Hello world',
   fontSize: 16,
   fontFamily: 'sans-serif',
   textAlign: 'left',
@@ -86,8 +86,6 @@ describe('extractLabel', () => {
     const lineExpr = makeExpression('line', {
       kind: 'line',
       points: [[0, 0], [100, 100]],
-      startArrowhead: false,
-      endArrowhead: false,
     });
     expect(extractLabel(lineExpr)).toBeUndefined();
   });
@@ -159,8 +157,6 @@ describe('buildPrompt', () => {
     const lineExpr = makeExpression('line', {
       kind: 'line',
       points: [[0, 0], [100, 100]],
-      startArrowhead: false,
-      endArrowhead: false,
     });
     const pos = calculateSuggestedPosition([lineExpr]);
     const prompt = buildPrompt('explain', [lineExpr], pos);

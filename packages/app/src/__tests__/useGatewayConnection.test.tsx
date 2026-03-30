@@ -188,7 +188,7 @@ describe('useGatewayConnection', () => {
   describe('settings change detection', () => {
     it('reconnects when settings change in localStorage', () => {
       setSettings('ws://localhost:3001', 'sk-key-1');
-      const { result } = renderHook(() => useGatewayConnection());
+      const { result: _result } = renderHook(() => useGatewayConnection());
 
       expect(createGatewayConnection).toHaveBeenCalledTimes(1);
 

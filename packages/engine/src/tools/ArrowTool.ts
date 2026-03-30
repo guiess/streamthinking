@@ -12,7 +12,7 @@ import { nanoid } from 'nanoid';
 import type { VisualExpression, ArrowBinding } from '@infinicanvas/protocol';
 import type { ToolHandler, DrawPreview } from './BaseTool.js';
 import { useCanvasStore } from '../store/canvasStore.js';
-import { findSnapPoint, getAnchorPoint } from '../interaction/connectorHelpers.js';
+import { findSnapPoint } from '../interaction/connectorHelpers.js';
 
 /** Minimum arrow length in world units. */
 const MIN_ARROW_LENGTH = 5;

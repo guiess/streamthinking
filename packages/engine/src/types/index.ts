@@ -93,12 +93,6 @@ export interface CanvasActions {
    */
   replaceState: (expressions: VisualExpression[], expressionOrder: string[]) => void;
   /**
-   * Apply a validated style partial to multiple expressions. [S7-5]
-   * Validates style with expressionStyleSchema.partial() before applying.
-   * Skips locked expressions.
-   */
-  styleExpressions: (ids: string[], style: Partial<ExpressionStyle>) => void;
-  /**
    * Move expressions to new positions. Emits `move` ProtocolOperations.
    * Accepts original positions so undo snapshot reflects pre-drag state.
    */

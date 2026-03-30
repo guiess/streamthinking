@@ -20,7 +20,7 @@ import type { ToolType } from '../types/index.js';
  */
 export interface DrawPreview {
   /** The kind of shape being previewed. */
-  kind: 'rectangle' | 'ellipse' | 'diamond' | 'line' | 'arrow' | 'freehand';
+  kind: 'rectangle' | 'ellipse' | 'diamond' | 'line' | 'arrow' | 'freehand' | 'sticky-note';
   /** World-space x coordinate. */
   x: number;
   /** World-space y coordinate. */

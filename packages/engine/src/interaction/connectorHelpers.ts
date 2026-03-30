@@ -8,7 +8,7 @@
  * @module
  */
 
-import type { VisualExpression, ArrowData, ArrowBinding } from '@infinicanvas/protocol';
+import type { VisualExpression, ArrowData } from '@infinicanvas/protocol';
 
 /** Kinds that support snap/binding (shapes with meaningful edges). */
 const BINDABLE_KINDS = new Set(['rectangle', 'ellipse', 'diamond', 'sticky-note', 'stencil']);
@@ -25,7 +25,7 @@ export function findSnapPoint(
   worldPoint: { x: number; y: number },
   targetExpression: VisualExpression,
   snapDistance: number,
-): { point: { x: number; y: number }; anchor: string } | null {
+): { point: { x: number; y: number }; anchor: string; ratio: number } | null {
   if (snapDistance <= 0) return null;
   if (!BINDABLE_KINDS.has(targetExpression.kind)) return null;
 
@@ -42,10 +42,6 @@ export function findSnapPoint(
       worldPoint.y < expandedTop || worldPoint.y > expandedBottom) {
     return null; // Too far from shape
   }
-
-  // Find closest point on the shape's perimeter
-  const cx = x + width / 2;
-  const cy = y + height / 2;
 
   // Project cursor to nearest point on each edge, pick closest
   const edgePoints: Array<{ anchor: string; point: { x: number; y: number }; ratio: number }> = [
@@ -142,14 +138,6 @@ export function resolveBindings(
     return points;
   }
 
-  // Use shape centers as routing references
-  const startCenter = startShape
-    ? { x: startShape.position.x + startShape.size.width / 2, y: startShape.position.y + startShape.size.height / 2 }
-    : null;
-  const endCenter = endShape
-    ? { x: endShape.position.x + endShape.size.width / 2, y: endShape.position.y + endShape.size.height / 2 }
-    : null;
-
   // Resolve start binding — use stored anchor from snap
   if (arrowData.startBinding && startShape) {
     const anchor = arrowData.startBinding.anchor;
@@ -167,22 +155,6 @@ export function resolveBindings(
   }
 
   return points;
-}
-
-/** Determine which edge of a shape faces a target point. */
-function getBestEdge(
-  expr: VisualExpression,
-  toward: { x: number; y: number },
-): string {
-  const cx = expr.position.x + expr.size.width / 2;
-  const cy = expr.position.y + expr.size.height / 2;
-  const dx = toward.x - cx;
-  const dy = toward.y - cy;
-
-  if (Math.abs(dx) > Math.abs(dy)) {
-    return dx > 0 ? 'right' : 'left';
-  }
-  return dy > 0 ? 'bottom' : 'top';
 }
 
 /**
@@ -233,28 +205,4 @@ export function clearBindingsForDeletedExpression(
   }
 
   return changed ? updated : undefined;
-}
-
-// ── Internal helpers ─────────────────────────────────────────
-
-/** Get all four anchor points for a bindable expression. */
-function getAnchorPoints(
-  expr: VisualExpression,
-): Array<{ anchor: string; point: { x: number; y: number } }> {
-  return [
-    { anchor: 'top', point: getAnchorPoint(expr, 'top') },
-    { anchor: 'right', point: getAnchorPoint(expr, 'right') },
-    { anchor: 'bottom', point: getAnchorPoint(expr, 'bottom') },
-    { anchor: 'left', point: getAnchorPoint(expr, 'left') },
-  ];
-}
-
-/** Resolve a single binding to a world coordinate. */
-function resolveBinding(
-  binding: ArrowBinding,
-  expressions: Record<string, VisualExpression>,
-): { x: number; y: number } | null {
-  const target = expressions[binding.expressionId];
-  if (!target) return null;
-  return getAnchorPoint(target, binding.anchor, binding.ratio ?? 0.5);
 }

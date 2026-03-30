@@ -49,7 +49,7 @@ const flowchartExpr = makeExpression('flowchart', {
 
 const textExpr = makeExpression('text', {
   kind: 'text',
-  content: 'Hello world',
+  text: 'Hello world',
   fontSize: 16,
   fontFamily: 'sans-serif',
   textAlign: 'left',
