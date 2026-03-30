@@ -49,6 +49,8 @@ export interface DrawLineParams {
 export interface DrawArrowParams {
   points: [number, number][];
   label?: string;
+  endArrowhead?: boolean;
+  startArrowhead?: boolean;
 }
 
 export interface DrawTextParams {
@@ -57,6 +59,7 @@ export interface DrawTextParams {
   text: string;
   fontSize?: number;
   fontFamily?: string;
+  textAlign?: 'left' | 'center' | 'right';
 }
 
 export interface AddStickyNoteParams {
@@ -64,6 +67,8 @@ export interface AddStickyNoteParams {
   y: number;
   text: string;
   color?: string;
+  width?: number;
+  height?: number;
 }
 
 // ── Tool implementations ───────────────────────────────────
@@ -140,7 +145,8 @@ export function buildArrow(params: DrawArrowParams): VisualExpression {
   const data: ArrowData = {
     kind: 'arrow',
     points: params.points,
-    endArrowhead: true,
+    endArrowhead: params.endArrowhead !== false ? 'triangle' : 'none',
+    startArrowhead: params.startArrowhead ? 'triangle' : 'none',
   };
 
   // Compute bounding box from points
@@ -166,7 +172,7 @@ export function buildText(params: DrawTextParams): VisualExpression {
     text: params.text,
     fontSize: params.fontSize ?? DEFAULT_TEXT.fontSize,
     fontFamily: params.fontFamily ?? DEFAULT_TEXT.fontFamily,
-    textAlign: DEFAULT_TEXT.textAlign,
+    textAlign: params.textAlign ?? DEFAULT_TEXT.textAlign,
   };
 
   // Estimate text size based on content
@@ -196,7 +202,7 @@ export function buildStickyNote(params: AddStickyNoteParams): VisualExpression {
   return buildExpression(
     'sticky-note',
     { x: params.x, y: params.y },
-    { width: 200, height: 200 },
+    { width: params.width ?? 200, height: params.height ?? 200 },
     data,
     { backgroundColor: color, fillStyle: 'solid' },
   );

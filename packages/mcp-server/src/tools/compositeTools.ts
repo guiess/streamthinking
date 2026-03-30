@@ -368,69 +368,268 @@ export function buildKanban(params: DrawKanbanParams): VisualExpression {
   return buildExpression('kanban', position, { width, height }, data);
 }
 
-// ── Tool executors (send to gateway) ───────────────────────
+// ── Tool executors — decompose into primitives ─────────────
+
+import {
+  buildRectangle,
+  buildEllipse,
+  buildText,
+  buildArrow,
+  buildStickyNote,
+} from './primitiveTools.js';
+
+/** Layout constants for primitive decomposition. */
+const P = {
+  nodeW: 140, nodeH: 50, nodeSep: 60, rankSep: 80, pad: 40,
+  colW: 200, cardH: 40, cardGap: 10, headerH: 36,
+  participantW: 100, participantH: 40, msgGap: 50, lifelineGap: 160,
+  stepW: 300, stepH: 60, stepGap: 20,
+  branchSpread: 200, branchRadial: 160,
+};
+
+const SHAPE_MAP: Record<string, string> = {
+  rect: 'rectangle', diamond: 'diamond', ellipse: 'ellipse',
+  parallelogram: 'rectangle', cylinder: 'rectangle',
+};
 
 export async function executeDrawFlowchart(
   client: IGatewayClient,
   params: DrawFlowchartParams,
 ): Promise<string> {
-  const expr = buildFlowchart(params);
-  await client.sendCreate(expr);
-  return `Created flowchart '${params.title}' with ${params.nodes.length} nodes and ${params.edges.length} edges [id: ${expr.id}]`;
+  const ox = params.x ?? 0, oy = params.y ?? 0;
+  const dir = params.direction ?? 'TB';
+  const isVert = dir === 'TB' || dir === 'BT';
+  const ids = new Map<string, { cx: number; cy: number }>();
+
+  // Title
+  const titleExpr = buildText({ x: ox, y: oy, text: params.title, fontSize: 20, fontFamily: 'sans-serif', textAlign: 'left' });
+  await client.sendCreate(titleExpr);
+
+  // Layout nodes in grid
+  const cols = isVert ? Math.ceil(Math.sqrt(params.nodes.length)) : params.nodes.length;
+  params.nodes.forEach((node, i) => {
+    const col = isVert ? i % cols : i;
+    const row = isVert ? Math.floor(i / cols) : 0;
+    const cx = ox + P.pad + col * (P.nodeW + P.nodeSep) + P.nodeW / 2;
+    const cy = oy + P.pad + 30 + row * (P.nodeH + P.rankSep) + P.nodeH / 2;
+    ids.set(node.id, { cx, cy });
+  });
+
+  // Create nodes
+  for (const node of params.nodes) {
+    const pos = ids.get(node.id)!;
+    const kind = SHAPE_MAP[node.shape ?? 'rect'] ?? 'rectangle';
+    const expr = buildExpression(
+      kind as VisualExpression['kind'],
+      { x: pos.cx - P.nodeW / 2, y: pos.cy - P.nodeH / 2 },
+      { width: P.nodeW, height: P.nodeH },
+      { kind, label: node.label } as VisualExpression['data'],
+    );
+    await client.sendCreate(expr);
+  }
+
+  // Create edges as arrows
+  for (const edge of params.edges) {
+    const from = ids.get(edge.from);
+    const to = ids.get(edge.to);
+    if (!from || !to) continue;
+    const arrow = buildArrow({
+      points: [[from.cx, from.cy + P.nodeH / 2], [to.cx, to.cy - P.nodeH / 2]],
+      endArrowhead: true, label: edge.label,
+    });
+    await client.sendCreate(arrow);
+  }
+
+  return `Created flowchart '${params.title}' with ${params.nodes.length} nodes and ${params.edges.length} edges (primitives)`;
 }
 
 export async function executeDrawSequenceDiagram(
   client: IGatewayClient,
   params: DrawSequenceDiagramParams,
 ): Promise<string> {
-  const expr = buildSequenceDiagram(params);
-  await client.sendCreate(expr);
-  return `Created sequence diagram '${params.title}' with ${params.participants.length} participants and ${params.messages.length} messages [id: ${expr.id}]`;
+  const ox = params.x ?? 0, oy = params.y ?? 0;
+
+  // Title
+  await client.sendCreate(buildText({ x: ox, y: oy, text: params.title, fontSize: 20, fontFamily: 'sans-serif', textAlign: 'left' }));
+
+  // Participants
+  const pMap = new Map<string, number>();
+  params.participants.forEach((p, i) => {
+    const cx = ox + i * P.lifelineGap + P.participantW / 2;
+    pMap.set(p.id, cx);
+    const expr = buildRectangle({ x: cx - P.participantW / 2, y: oy + 30, width: P.participantW, height: P.participantH, label: p.name, backgroundColor: '#e3f2fd', fillStyle: 'solid' });
+    client.sendCreate(expr);
+  });
+
+  // Messages as arrows
+  params.messages.forEach((msg, i) => {
+    const fromX = pMap.get(msg.from) ?? ox;
+    const toX = pMap.get(msg.to) ?? ox + 100;
+    const y = oy + 30 + P.participantH + 30 + i * P.msgGap;
+    const arrow = buildArrow({ points: [[fromX, y], [toX, y]], endArrowhead: true, label: msg.label });
+    client.sendCreate(arrow);
+  });
+
+  return `Created sequence diagram '${params.title}' with ${params.participants.length} participants and ${params.messages.length} messages (primitives)`;
 }
 
 export async function executeDrawMindMap(
   client: IGatewayClient,
   params: DrawMindMapParams,
 ): Promise<string> {
-  const expr = buildMindMap(params);
-  await client.sendCreate(expr);
-  return `Created mind map '${params.centralTopic}' with ${params.branches.length} branches [id: ${expr.id}]`;
+  const ox = params.x ?? 0, oy = params.y ?? 0;
+
+  // Central topic
+  const center = buildEllipse({ x: ox - 60, y: oy - 25, width: 120, height: 50, label: params.centralTopic });
+  await client.sendCreate(center);
+
+  // Branches radially
+  const angleStep = (2 * Math.PI) / Math.max(params.branches.length, 1);
+  let branchCount = 0;
+
+  function layoutBranch(branch: MindMapBranch, cx: number, cy: number, angle: number, depth: number) {
+    const bx = cx + Math.cos(angle) * (P.branchRadial + depth * 80);
+    const by = cy + Math.sin(angle) * (P.branchRadial + depth * 80);
+    const rect = buildRectangle({ x: bx - 60, y: by - 18, width: 120, height: 36, label: branch.label, backgroundColor: '#fff9c4', fillStyle: 'solid' });
+    client.sendCreate(rect);
+    const line = buildArrow({ points: [[cx, cy], [bx, by]] });
+    client.sendCreate(line);
+    branchCount++;
+
+    if (branch.children) {
+      const childAngleSpread = 0.4;
+      branch.children.forEach((child, i) => {
+        const childAngle = angle + (i - (branch.children.length - 1) / 2) * childAngleSpread;
+        layoutBranch(child, bx, by, childAngle, depth + 1);
+      });
+    }
+  }
+
+  params.branches.forEach((branch, i) => {
+    layoutBranch(branch, ox, oy, i * angleStep - Math.PI / 2, 0);
+  });
+
+  return `Created mind map '${params.centralTopic}' with ${branchCount} branches (primitives)`;
 }
 
 export async function executeDrawReasoningChain(
   client: IGatewayClient,
   params: DrawReasoningChainParams,
 ): Promise<string> {
-  const expr = buildReasoningChain(params);
-  await client.sendCreate(expr);
-  return `Created reasoning chain '${params.question}' with ${params.steps.length} steps [id: ${expr.id}]`;
+  const ox = params.x ?? 0, oy = params.y ?? 0;
+
+  // Question
+  const q = buildRectangle({ x: ox, y: oy, width: P.stepW, height: P.stepH, label: params.question, backgroundColor: '#e3f2fd', fillStyle: 'solid' });
+  await client.sendCreate(q);
+
+  // Steps
+  let cy = oy + P.stepH;
+  for (const step of params.steps) {
+    const arrow = buildArrow({ points: [[ox + P.stepW / 2, cy], [ox + P.stepW / 2, cy + P.stepGap]], endArrowhead: true });
+    await client.sendCreate(arrow);
+    cy += P.stepGap;
+    const rect = buildRectangle({ x: ox, y: cy, width: P.stepW, height: P.stepH, label: `${step.title}: ${step.content}` });
+    await client.sendCreate(rect);
+    cy += P.stepH;
+  }
+
+  // Final answer
+  const arrow = buildArrow({ points: [[ox + P.stepW / 2, cy], [ox + P.stepW / 2, cy + P.stepGap]], endArrowhead: true });
+  await client.sendCreate(arrow);
+  cy += P.stepGap;
+  const ans = buildRectangle({ x: ox, y: cy, width: P.stepW, height: P.stepH, label: params.finalAnswer, backgroundColor: '#c8e6c9', fillStyle: 'solid' });
+  await client.sendCreate(ans);
+
+  return `Created reasoning chain '${params.question}' with ${params.steps.length} steps (primitives)`;
 }
 
 export async function executeDrawWireframe(
   client: IGatewayClient,
   params: DrawWireframeParams,
 ): Promise<string> {
-  const expr = buildWireframe(params);
-  await client.sendCreate(expr);
-  return `Created wireframe '${params.title}' (${params.screenSize.width}×${params.screenSize.height}) with ${params.components.length} components [id: ${expr.id}]`;
+  const ox = params.x ?? 0, oy = params.y ?? 0;
+
+  // Screen frame
+  const frame = buildRectangle({ x: ox, y: oy, width: params.screenSize.width, height: params.screenSize.height, label: params.title });
+  await client.sendCreate(frame);
+
+  // Components as rectangles with labels
+  for (const comp of params.components) {
+    const rect = buildRectangle({
+      x: ox + comp.x, y: oy + comp.y,
+      width: comp.width, height: comp.height,
+      label: `[${comp.type}] ${comp.label}`,
+      backgroundColor: '#f5f5f5', fillStyle: 'solid',
+    });
+    await client.sendCreate(rect);
+  }
+
+  return `Created wireframe '${params.title}' with ${params.components.length} components (primitives)`;
 }
 
 export async function executeDrawRoadmap(
   client: IGatewayClient,
   params: DrawRoadmapParams,
 ): Promise<string> {
-  const expr = buildRoadmap(params);
-  await client.sendCreate(expr);
-  const totalItems = params.phases.reduce((sum, p) => sum + p.items.length, 0);
-  return `Created roadmap '${params.title}' with ${params.phases.length} phases and ${totalItems} items [id: ${expr.id}]`;
+  const ox = params.x ?? 0, oy = params.y ?? 0;
+  const isHoriz = (params.orientation ?? 'horizontal') === 'horizontal';
+
+  // Title
+  await client.sendCreate(buildText({ x: ox, y: oy, text: params.title, fontSize: 20, fontFamily: 'sans-serif', textAlign: 'left' }));
+
+  const statusColors: Record<string, string> = { done: '#c8e6c9', 'in-progress': '#fff9c4', planned: '#f5f5f5' };
+
+  params.phases.forEach((phase, pi) => {
+    const px = isHoriz ? ox + pi * (P.colW + 20) : ox;
+    const py = isHoriz ? oy + 30 : oy + 30 + pi * 200;
+
+    // Phase header
+    const header = buildRectangle({ x: px, y: py, width: P.colW, height: P.headerH, label: phase.name, backgroundColor: '#e3f2fd', fillStyle: 'solid' });
+    client.sendCreate(header);
+
+    // Items
+    phase.items.forEach((item, ii) => {
+      const iy = py + P.headerH + 10 + ii * (P.cardH + P.cardGap);
+      const card = buildRectangle({
+        x: px + 10, y: iy, width: P.colW - 20, height: P.cardH,
+        label: item.title, backgroundColor: statusColors[item.status] ?? '#f5f5f5', fillStyle: 'solid',
+      });
+      client.sendCreate(card);
+    });
+  });
+
+  const totalItems = params.phases.reduce((s, p) => s + p.items.length, 0);
+  return `Created roadmap '${params.title}' with ${params.phases.length} phases and ${totalItems} items (primitives)`;
 }
 
 export async function executeDrawKanban(
   client: IGatewayClient,
   params: DrawKanbanParams,
 ): Promise<string> {
-  const expr = buildKanban(params);
-  await client.sendCreate(expr);
-  const totalCards = params.columns.reduce((sum, c) => sum + c.cards.length, 0);
-  return `Created kanban board '${params.title}' with ${params.columns.length} columns and ${totalCards} cards [id: ${expr.id}]`;
+  const ox = params.x ?? 0, oy = params.y ?? 0;
+
+  // Title
+  await client.sendCreate(buildText({ x: ox, y: oy, text: params.title, fontSize: 20, fontFamily: 'sans-serif', textAlign: 'left' }));
+
+  params.columns.forEach((col, ci) => {
+    const cx = ox + ci * (P.colW + 20);
+    const cy = oy + 30;
+
+    // Column header
+    const header = buildRectangle({ x: cx, y: cy, width: P.colW, height: P.headerH, label: col.title, backgroundColor: '#e3f2fd', fillStyle: 'solid' });
+    client.sendCreate(header);
+
+    // Cards
+    col.cards.forEach((card, ii) => {
+      const iy = cy + P.headerH + 10 + ii * (P.cardH + P.cardGap);
+      const cardExpr = buildStickyNote({
+        x: cx + 10, y: iy, width: P.colW - 20, height: P.cardH,
+        text: card.description ? `${card.title}\n${card.description}` : card.title,
+      });
+      client.sendCreate(cardExpr);
+    });
+  });
+
+  const totalCards = params.columns.reduce((s, c) => s + c.cards.length, 0);
+  return `Created kanban '${params.title}' with ${params.columns.length} columns and ${totalCards} cards (primitives)`;
 }
