@@ -43,20 +43,49 @@ function buildStencilsSection(): string {
 ### Stencil Label Placement
 - **Container stencils** (zones, clusters, namespaces): Use \`labelPosition: 'top-left'\` and \`fontSize: 14\`. This renders the label inside the container at the top-left.
 - **Icon stencils** (server, database, pod, etc.): Use \`labelPosition: 'below'\` (default) and \`fontSize: 10\`.
-- **Inner components**: When placing stencils inside containers, use at least 64×64 size. Leave 40px margin from container edges.`);
+
+### Container Stencils — Do NOT use default sizes!
+Container stencils (cluster, namespace, zone, resource-group, etc.) have small default sizes (200×150).
+**Always calculate the actual size needed** based on what goes inside — see Layout Guide.
+- A container with 2 inner objects side-by-side needs at least **width: 340px, height: 200px**
+- A container with 3 inner objects in a row needs at least **width: 450px, height: 200px**
+- A cluster containing a namespace needs at least **100px more** than the namespace in each dimension`);
 
   return lines.join('\n');
 }
 
 function buildLayoutGuideSection(): string {
   return `## Layout Guide
-- Gap between objects: 40-60px
-- Gap between connected nodes: 60-80px vertically, 80-100px horizontally
-- Minimum margin from edges: 40px
-- Inner objects: place 20px inside container borders
-- Standard grid: align objects to 20px grid for clean layouts
-- Container inner padding: place inner objects at least 40px from container edges
-- Inner stencils: use 64×64 minimum size (override with width/height params)`;
+
+### Container Sizing Formula
+When placing objects inside containers, calculate the container size:
+- **Width** = (number of columns × object width) + ((columns - 1) × horizontal gap) + (2 × padding)
+- **Height** = (number of rows × object height) + ((rows - 1) × vertical gap) + (2 × padding) + label height
+
+### Concrete values
+- **Padding** inside containers: 50px on all sides (top needs 70px if container has a label)
+- **Gap** between inner objects: 80px horizontal, 80px vertical
+- **Inner stencil size**: 64×64 minimum (use width/height params to override)
+
+### Example: 3 objects in a row inside a namespace
+- Objects: 3 × 64px wide = 192px
+- Gaps: 2 × 80px = 160px
+- Padding: 2 × 50px = 100px
+- **Total width needed: 452px**
+- Height: 64px + 70px top + 50px bottom = **184px minimum**
+
+### Example: namespace inside a cluster
+- Namespace is 452×184
+- Cluster padding: 50px each side, 70px top for label
+- **Cluster width: 452 + 100 = 552px**
+- **Cluster height: 184 + 120 = 304px**
+
+### Nesting rule
+Always size from inside out: calculate innermost container first, then add padding for each outer container.
+
+### Object spacing outside containers
+- Gap between separate objects: 60px
+- Gap between external stencils: 80-100px horizontal for arrows to be readable`;
 }
 
 function buildFontGuideSection(): string {
