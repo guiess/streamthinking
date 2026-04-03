@@ -51,6 +51,8 @@ function createMockClient(expressions: VisualExpression[] = []): IGatewayClient 
     sendMorph: vi.fn().mockResolvedValue(undefined),
     sendStyle: vi.fn().mockResolvedValue(undefined),
     getState: vi.fn().mockReturnValue(expressions),
+    sendSceneUpdate: vi.fn().mockResolvedValue(undefined),
+    getExcalidrawElements: vi.fn().mockReturnValue([]),
   };
 }
 

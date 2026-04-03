@@ -32,6 +32,8 @@ function createMockGatewayClient(options?: {
     sendMorph: vi.fn().mockResolvedValue(undefined),
     sendStyle: vi.fn().mockResolvedValue(undefined),
     getState: vi.fn().mockReturnValue([]),
+    sendSceneUpdate: vi.fn().mockResolvedValue(undefined),
+    getExcalidrawElements: vi.fn().mockReturnValue([]),
   };
 }
 

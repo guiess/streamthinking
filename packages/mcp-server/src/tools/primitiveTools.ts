@@ -20,6 +20,12 @@ import type {
 import { DEFAULT_TEXT, randomStickyColor } from '../defaults.js';
 import { buildExpression } from '../expressionFactory.js';
 import type { IGatewayClient } from '../gatewayClient.js';
+import {
+  createExcalidrawRectangle,
+  createExcalidrawEllipse,
+  createExcalidrawArrow,
+  createExcalidrawText,
+} from './excalidrawBuilder.js';
 
 // ── Tool parameter types ───────────────────────────────────
 
@@ -218,6 +224,26 @@ export async function executeDrawRectangle(
 ): Promise<string> {
   const expr = buildRectangle(params);
   await client.sendCreate(expr);
+
+  // Also send as Excalidraw element for the new editor
+  const existingElements = client.getExcalidrawElements();
+  const excalRect = createExcalidrawRectangle({
+    x: params.x, y: params.y, width: params.width, height: params.height,
+    label: params.label, backgroundColor: params.backgroundColor,
+  });
+  const elements = [...existingElements, excalRect];
+  if (params.label) {
+    const textEl = createExcalidrawText({
+      x: params.x + params.width / 2 - 50,
+      y: params.y + params.height / 2 - 12,
+      text: params.label,
+      containerId: excalRect.id as string,
+    });
+    (excalRect as Record<string, unknown>).boundElements = [{ id: textEl.id, type: 'text' }];
+    elements.push(textEl);
+  }
+  await client.sendSceneUpdate(elements);
+
   const label = params.label ? ` '${params.label}'` : '';
   return `Created rectangle${label} (${params.width}×${params.height}) at (${params.x}, ${params.y}) [id: ${expr.id}]`;
 }
@@ -228,6 +254,25 @@ export async function executeDrawEllipse(
 ): Promise<string> {
   const expr = buildEllipse(params);
   await client.sendCreate(expr);
+
+  const existingElements = client.getExcalidrawElements();
+  const excalEllipse = createExcalidrawEllipse({
+    x: params.x, y: params.y, width: params.width, height: params.height,
+    label: params.label,
+  });
+  const elements = [...existingElements, excalEllipse];
+  if (params.label) {
+    const textEl = createExcalidrawText({
+      x: params.x + params.width / 2 - 50,
+      y: params.y + params.height / 2 - 12,
+      text: params.label,
+      containerId: excalEllipse.id as string,
+    });
+    (excalEllipse as Record<string, unknown>).boundElements = [{ id: textEl.id, type: 'text' }];
+    elements.push(textEl);
+  }
+  await client.sendSceneUpdate(elements);
+
   const label = params.label ? ` '${params.label}'` : '';
   return `Created ellipse${label} (${params.width}×${params.height}) at (${params.x}, ${params.y}) [id: ${expr.id}]`;
 }
@@ -247,6 +292,17 @@ export async function executeDrawArrow(
 ): Promise<string> {
   const expr = buildArrow(params);
   await client.sendCreate(expr);
+
+  const existingElements = client.getExcalidrawElements();
+  const start = params.points[0]!;
+  const end = params.points[params.points.length - 1]!;
+  const excalArrow = createExcalidrawArrow({
+    startX: start[0], startY: start[1],
+    endX: end[0], endY: end[1],
+    label: params.label,
+  });
+  await client.sendSceneUpdate([...existingElements, excalArrow]);
+
   const label = params.label ? ` '${params.label}'` : '';
   return `Created arrow${label} with ${params.points.length} points [id: ${expr.id}]`;
 }
@@ -257,6 +313,16 @@ export async function executeDrawText(
 ): Promise<string> {
   const expr = buildText(params);
   await client.sendCreate(expr);
+
+  const existingElements = client.getExcalidrawElements();
+  const fontSize = params.fontSize ?? 14;
+  const estimatedWidth = Math.max(params.text.length * fontSize * 0.6, 100);
+  const excalText = createExcalidrawText({
+    x: params.x, y: params.y, text: params.text,
+    fontSize, width: estimatedWidth, height: fontSize * 1.5,
+  });
+  await client.sendSceneUpdate([...existingElements, excalText]);
+
   const preview = params.text.length > 40 ? params.text.slice(0, 40) + '…' : params.text;
   return `Created text '${preview}' at (${params.x}, ${params.y}) [id: ${expr.id}]`;
 }
@@ -267,6 +333,25 @@ export async function executeAddStickyNote(
 ): Promise<string> {
   const expr = buildStickyNote(params);
   await client.sendCreate(expr);
+
+  // Sticky notes → rectangle with colored background + bound text in Excalidraw
+  const existingElements = client.getExcalidrawElements();
+  const w = params.width ?? 200;
+  const h = params.height ?? 200;
+  const excalRect = createExcalidrawRectangle({
+    x: params.x, y: params.y, width: w, height: h,
+    backgroundColor: params.color ?? '#FFF9C4',
+    strokeColor: '#1e1e1e',
+  });
+  const excalText = createExcalidrawText({
+    x: params.x + w / 2 - 50,
+    y: params.y + h / 2 - 12,
+    text: params.text,
+    containerId: excalRect.id as string,
+  });
+  (excalRect as Record<string, unknown>).boundElements = [{ id: excalText.id, type: 'text' }];
+  await client.sendSceneUpdate([...existingElements, excalRect, excalText]);
+
   const preview = params.text.length > 40 ? params.text.slice(0, 40) + '…' : params.text;
   return `Created sticky note '${preview}' at (${params.x}, ${params.y}) [id: ${expr.id}]`;
 }

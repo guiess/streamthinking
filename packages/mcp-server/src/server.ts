@@ -407,10 +407,12 @@ export function createMcpServer(gatewayClient: IGatewayClient): McpServer {
     async () => {
       const textResult = await executeGetState(gatewayClient);
       const structuredResult = formatStructuredState(gatewayClient.getState());
+      const excalElements = gatewayClient.getExcalidrawElements();
       return {
         content: [
           { type: 'text' as const, text: textResult },
           { type: 'text' as const, text: structuredResult },
+          { type: 'text' as const, text: JSON.stringify({ excalidrawElementCount: excalElements.length, excalidrawElements: excalElements }) },
         ],
       };
     },
@@ -422,6 +424,7 @@ export function createMcpServer(gatewayClient: IGatewayClient): McpServer {
     {},
     async () => {
       const result = await executeClear(gatewayClient);
+      await gatewayClient.sendSceneUpdate([]);
       return { content: [{ type: 'text' as const, text: result }] };
     },
   );

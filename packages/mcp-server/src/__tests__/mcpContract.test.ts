@@ -82,6 +82,8 @@ function createMockClient(options?: {
       if (throwOnSend) throw new Error('Gateway connection lost');
     }),
     getState: vi.fn().mockReturnValue(expressions),
+    sendSceneUpdate: vi.fn().mockResolvedValue(undefined),
+    getExcalidrawElements: vi.fn().mockReturnValue([]),
   };
 }
 

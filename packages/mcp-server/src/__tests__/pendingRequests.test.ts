@@ -41,6 +41,8 @@ function createMockClient(options?: {
       queue = [];
       return result;
     }),
+    sendSceneUpdate: vi.fn().mockResolvedValue(undefined),
+    getExcalidrawElements: vi.fn().mockReturnValue([]),
   };
 }
 

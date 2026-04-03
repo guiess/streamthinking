@@ -31,6 +31,8 @@ function createMockClient(): IGatewayClient {
     getState: vi.fn().mockReturnValue([]),
     getPendingRequests: vi.fn().mockReturnValue([]),
     updateAgentName: vi.fn(),
+    sendSceneUpdate: vi.fn().mockResolvedValue(undefined),
+    getExcalidrawElements: vi.fn().mockReturnValue([]),
   };
 }
 
