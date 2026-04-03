@@ -373,27 +373,29 @@ export function createGatewayConnection(
       case 'screenshot-request': {
         const canvas = document.querySelector('canvas');
         if (canvas && ws && ws.readyState === WebSocketImpl.OPEN) {
-          try {
-            const imageBase64 = canvas.toDataURL('image/png');
-            ws.send(JSON.stringify({
-              type: 'screenshot-response',
-              requestId: (message as ScreenshotRequestInbound).requestId,
-              imageBase64,
-              width: canvas.width,
-              height: canvas.height,
-            }));
-          } catch (err) {
-            // Canvas may be tainted by cross-origin images (SVG stencils)
-            // Fall back to sending the error
-            ws.send(JSON.stringify({
-              type: 'screenshot-response',
-              requestId: (message as ScreenshotRequestInbound).requestId,
-              imageBase64: '',
-              width: 0,
-              height: 0,
-              error: `Canvas capture failed: ${(err as Error).message}`,
-            }));
-          }
+          // Wait for next frame render to complete before capturing
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              try {
+                const imageBase64 = canvas.toDataURL('image/png');
+                ws.send(JSON.stringify({
+                  type: 'screenshot-response',
+                  requestId: (message as ScreenshotRequestInbound).requestId,
+                  imageBase64,
+                  width: canvas.width,
+                  height: canvas.height,
+                }));
+              } catch (err) {
+                ws.send(JSON.stringify({
+                  type: 'screenshot-response',
+                  requestId: (message as ScreenshotRequestInbound).requestId,
+                  imageBase64: '',
+                  width: 0,
+                  height: 0,
+                }));
+              }
+            });
+          });
         }
         break;
       }
