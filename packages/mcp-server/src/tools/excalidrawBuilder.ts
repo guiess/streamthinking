@@ -35,6 +35,13 @@ function baseProps(params: {
     isDeleted: false,
     boundElements: null,
     locked: false,
+    groupIds: [],
+    seed: Math.floor(Math.random() * 2147483647),
+    version: 1,
+    versionNonce: Math.floor(Math.random() * 2147483647),
+    updated: Date.now(),
+    link: null,
+    frameId: null,
   };
 }
 
