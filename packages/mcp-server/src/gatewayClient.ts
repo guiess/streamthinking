@@ -174,6 +174,8 @@ export interface IGatewayClient {
   sendMorph(expressionId: string, fromKind: ExpressionKind, toKind: ExpressionKind, newData: ExpressionData): Promise<void>;
   /** Send a style operation to change expression visual properties. */
   sendStyle(expressionIds: string[], style: Partial<import('@infinicanvas/protocol').ExpressionStyle>): Promise<void>;
+  /** Send an update operation to change position, size, style, or data. */
+  sendUpdate(expressionId: string, changes: { position?: { x: number; y: number }; size?: { width: number; height: number }; style?: Record<string, unknown>; data?: Record<string, unknown> }): Promise<void>;
   /** Get the current canvas state (expressions). */
   getState(): VisualExpression[];
   /** Get and clear all pending agent requests from human users. */
@@ -367,6 +369,32 @@ export class GatewayClient implements IGatewayClient {
     };
 
     await this.sendOperation('style', payload);
+  }
+
+  async sendUpdate(
+    expressionId: string,
+    changes: {
+      position?: { x: number; y: number };
+      size?: { width: number; height: number };
+      style?: Record<string, unknown>;
+      data?: Record<string, unknown>;
+    },
+  ): Promise<void> {
+    const payload = {
+      type: 'update' as const,
+      expressionId,
+      changes: changes as { position?: { x: number; y: number }; size?: { width: number; height: number } },
+    };
+    await this.sendOperation('update', payload);
+
+    // Update local state
+    const expr = this.expressions.find((e) => e.id === expressionId);
+    if (expr) {
+      if (changes.position) expr.position = changes.position;
+      if (changes.size) expr.size = changes.size;
+      if (changes.style) expr.style = { ...expr.style, ...changes.style } as typeof expr.style;
+      if (changes.data) expr.data = changes.data as unknown as typeof expr.data;
+    }
   }
 
   getState(): VisualExpression[] {

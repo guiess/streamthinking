@@ -475,9 +475,9 @@ export function createMcpServer(gatewayClient: IGatewayClient): McpServer {
       }
       const oldX = target.position.x;
       const oldY = target.position.y;
-      await gatewayClient.sendDelete([params.expressionId]);
-      const moved = { ...target, position: { x: params.x, y: params.y } };
-      await gatewayClient.sendCreate(moved);
+      await gatewayClient.sendUpdate(params.expressionId, {
+        position: { x: params.x, y: params.y },
+      });
       return {
         content: [{
           type: 'text' as const,
@@ -503,9 +503,9 @@ export function createMcpServer(gatewayClient: IGatewayClient): McpServer {
       }
       const oldW = target.size.width;
       const oldH = target.size.height;
-      await gatewayClient.sendDelete([params.expressionId]);
-      const resized = { ...target, size: { width: params.width, height: params.height } };
-      await gatewayClient.sendCreate(resized);
+      await gatewayClient.sendUpdate(params.expressionId, {
+        size: { width: params.width, height: params.height },
+      });
       return {
         content: [{
           type: 'text' as const,
