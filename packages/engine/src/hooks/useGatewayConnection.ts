@@ -119,6 +119,11 @@ interface WaypointReorderInbound {
   toIndex: number;
 }
 
+interface ScreenshotRequestInbound {
+  type: 'screenshot-request';
+  requestId: string;
+}
+
 type InboundMessage =
   | SessionCreatedMessage
   | StateSyncMessage
@@ -128,7 +133,8 @@ type InboundMessage =
   | ErrorMessage
   | WaypointAddInbound
   | WaypointRemoveInbound
-  | WaypointReorderInbound;
+  | WaypointReorderInbound
+  | ScreenshotRequestInbound;
 
 // ── Constants ──────────────────────────────────────────────
 
@@ -361,6 +367,21 @@ export function createGatewayConnection(
         suppressRemoteWaypoints = true;
         useCanvasStore.getState().reorderWaypoints(message.fromIndex, message.toIndex);
         suppressRemoteWaypoints = false;
+        break;
+      }
+
+      case 'screenshot-request': {
+        const canvas = document.querySelector('canvas');
+        if (canvas) {
+          const imageBase64 = canvas.toDataURL('image/png');
+          connection.sendMessage({
+            type: 'screenshot-response',
+            requestId: (message as unknown as { requestId: string }).requestId,
+            imageBase64,
+            width: canvas.width,
+            height: canvas.height,
+          });
+        }
         break;
       }
     }

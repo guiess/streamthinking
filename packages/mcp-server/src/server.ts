@@ -654,5 +654,29 @@ export function createMcpServer(gatewayClient: IGatewayClient): McpServer {
     }),
   );
 
+  // ── Screenshot tool ───────────────────────────────────────
+
+  server.tool(
+    'canvas_screenshot',
+    'Take a screenshot of the current canvas. Returns a base64-encoded PNG image. Use this to visually verify your diagram and make adjustments.',
+    {},
+    async () => {
+      try {
+        const result = await gatewayClient.requestScreenshot();
+        return {
+          content: [{
+            type: 'image' as const,
+            data: result.imageBase64.replace(/^data:image\/png;base64,/, ''),
+            mimeType: 'image/png',
+          }],
+        };
+      } catch (err) {
+        return {
+          content: [{ type: 'text' as const, text: `Screenshot failed: ${(err as Error).message}` }],
+        };
+      }
+    },
+  );
+
   return server;
 }

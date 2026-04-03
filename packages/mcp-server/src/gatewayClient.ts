@@ -99,6 +99,15 @@ interface WaypointReorderInbound {
   toIndex: number;
 }
 
+/** Inbound screenshot response from a browser client. */
+interface ScreenshotResponseInbound {
+  type: 'screenshot-response';
+  requestId: string;
+  imageBase64: string;
+  width: number;
+  height: number;
+}
+
 type ServerMessage =
   | SessionCreatedMessage
   | StateSyncMessage
@@ -107,7 +116,8 @@ type ServerMessage =
   | AgentRequestInbound
   | WaypointAddInbound
   | WaypointRemoveInbound
-  | WaypointReorderInbound;
+  | WaypointReorderInbound
+  | ScreenshotResponseInbound;
 
 /** Options for creating a gateway client. */
 export interface GatewayClientOptions {
@@ -178,6 +188,8 @@ export interface IGatewayClient {
   sendWaypointRemove(index: number): void;
   /** Send a waypoint-reorder message to the gateway. */
   sendWaypointReorder(fromIndex: number, toIndex: number): void;
+  /** Request a screenshot from a connected browser client. */
+  requestScreenshot(timeoutMs?: number): Promise<{ imageBase64: string; width: number; height: number }>;
 }
 
 /**
@@ -192,6 +204,7 @@ export class GatewayClient implements IGatewayClient {
   private expressions: VisualExpression[] = [];
   private waypoints: CameraWaypoint[] = [];
   private pendingRequests: PendingAgentRequest[] = [];
+  private screenshotResolvers = new Map<string, (data: { imageBase64: string; width: number; height: number }) => void>();
   private readonly url: string;
   private readonly apiKey: string;
   private readonly initialSessionId: string | undefined;
@@ -395,6 +408,28 @@ export class GatewayClient implements IGatewayClient {
     }
   }
 
+  async requestScreenshot(timeoutMs = 5000): Promise<{ imageBase64: string; width: number; height: number }> {
+    if (!this.isConnected()) {
+      throw new Error('Not connected to gateway');
+    }
+
+    const requestId = nanoid();
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.screenshotResolvers.delete(requestId);
+        reject(new Error('Screenshot request timed out — is a browser connected?'));
+      }, timeoutMs);
+
+      this.screenshotResolvers.set(requestId, (data) => {
+        clearTimeout(timer);
+        this.screenshotResolvers.delete(requestId);
+        resolve(data);
+      });
+
+      this.send({ type: 'screenshot-request', requestId });
+    });
+  }
+
   // ── Private helpers ──────────────────────────────────────
 
   private setupMessageHandler(
@@ -468,6 +503,14 @@ export class GatewayClient implements IGatewayClient {
             onFail(new Error(`Gateway error [${msg.code}]: ${msg.message}`));
           }
           break;
+
+        case 'screenshot-response': {
+          const resolver = this.screenshotResolvers.get(msg.requestId);
+          if (resolver) {
+            resolver({ imageBase64: msg.imageBase64, width: msg.width, height: msg.height });
+          }
+          break;
+        }
       }
     });
   }

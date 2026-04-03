@@ -410,6 +410,36 @@ function handleMessage(
       break;
     }
 
+    case 'screenshot-request': {
+      const sessionId = clientSessions.get(ws);
+      if (!sessionId) {
+        sendError(ws, 'NOT_IN_SESSION', 'Join a session before requesting screenshots');
+        return;
+      }
+
+      const session = sessionManager.getSession(sessionId);
+      if (!session) {
+        sendError(ws, 'SESSION_NOT_FOUND', 'Session no longer exists');
+        return;
+      }
+
+      // Relay to all other clients (browser will handle the capture)
+      broadcastToOthers(session, ws, message);
+      break;
+    }
+
+    case 'screenshot-response': {
+      const sessionId = clientSessions.get(ws);
+      if (!sessionId) return;
+
+      const session = sessionManager.getSession(sessionId);
+      if (!session) return;
+
+      // Relay back to the requester (MCP server)
+      broadcastToOthers(session, ws, message);
+      break;
+    }
+
     default: {
       sendError(ws, 'UNKNOWN_MESSAGE_TYPE', `Unknown message type`);
       break;

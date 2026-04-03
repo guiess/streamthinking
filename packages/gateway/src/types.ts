@@ -110,6 +110,21 @@ export interface WaypointReorderMessage {
   toIndex: number;
 }
 
+/** Request a screenshot of the canvas from a connected browser client. */
+export interface ScreenshotRequestMessage {
+  type: 'screenshot-request';
+  requestId: string;
+}
+
+/** Browser response containing a base64-encoded PNG screenshot. */
+export interface ScreenshotResponseMessage {
+  type: 'screenshot-response';
+  requestId: string;
+  imageBase64: string;
+  width: number;
+  height: number;
+}
+
 export type ClientMessage =
   | CreateSessionMessage
   | JoinMessage
@@ -119,7 +134,9 @@ export type ClientMessage =
   | IdentifyMessage
   | WaypointAddMessage
   | WaypointRemoveMessage
-  | WaypointReorderMessage;
+  | WaypointReorderMessage
+  | ScreenshotRequestMessage
+  | ScreenshotResponseMessage;
 
 /** Client identifies itself as an agent (sent after joining a session). */
 export interface IdentifyMessage {
