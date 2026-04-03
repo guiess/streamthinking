@@ -506,6 +506,7 @@ export async function executeDrawSequenceDiagram(
   });
 
   // Messages as arrows
+  const lastMsgY = oy + 30 + P.participantH + 30 + (params.messages.length - 1) * P.msgGap;
   params.messages.forEach((msg, i) => {
     const fromX = pMap.get(msg.from) ?? ox;
     const toX = pMap.get(msg.to) ?? ox + 100;
@@ -517,6 +518,21 @@ export async function executeDrawSequenceDiagram(
     const arrow = buildArrow({ points: pts, endArrowhead: true, label: msg.label });
     client.sendCreate(arrow);
   });
+
+  // Lifelines — vertical dashed lines from participant bottom to below last message
+  const lifelineEnd = lastMsgY + 40;
+  for (const [, cx] of pMap) {
+    const lineStart = oy + 30 + P.participantH;
+    const pts: [number, number][] = [[cx, lineStart], [cx, lifelineEnd]];
+    const expr = buildExpression(
+      'arrow',
+      { x: cx, y: lineStart },
+      { width: 1, height: lifelineEnd - lineStart },
+      { kind: 'arrow', points: pts, startArrowhead: 'none', endArrowhead: 'none' } as VisualExpression['data'],
+      { strokeStyle: 'dashed' as const, strokeColor: '#888888', strokeWidth: 1 },
+    );
+    await client.sendCreate(expr);
+  }
 
   return `Created sequence diagram '${params.title}' with ${params.participants.length} participants and ${params.messages.length} messages (primitives)`;
 }
