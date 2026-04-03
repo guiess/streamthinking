@@ -373,30 +373,20 @@ export function createGatewayConnection(
       case 'screenshot-request': {
         const reqId = (message as ScreenshotRequestInbound).requestId;
         const currentWs = ws;
-        // Capture after a short delay to let the render loop complete a frame
-        setTimeout(() => {
-          const canvas = document.querySelector('canvas');
-          if (canvas && currentWs && currentWs.readyState === WebSocketImpl.OPEN) {
-            try {
-              const imageBase64 = canvas.toDataURL('image/png');
+        // Set global for the render loop to capture after next paint
+        (window as unknown as Record<string, unknown>).__infinicanvas_screenshot = {
+          respond: (imageBase64: string, w: number, h: number) => {
+            if (currentWs && currentWs.readyState === WebSocketImpl.OPEN) {
               currentWs.send(JSON.stringify({
                 type: 'screenshot-response',
                 requestId: reqId,
                 imageBase64,
-                width: canvas.width,
-                height: canvas.height,
-              }));
-            } catch {
-              currentWs.send(JSON.stringify({
-                type: 'screenshot-response',
-                requestId: reqId,
-                imageBase64: '',
-                width: 0,
-                height: 0,
+                width: w,
+                height: h,
               }));
             }
-          }
-        }, 200);
+          },
+        };
         break;
       }
     }
