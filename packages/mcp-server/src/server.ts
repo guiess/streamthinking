@@ -721,6 +721,12 @@ export function createMcpServer(gatewayClient: IGatewayClient): McpServer {
         const result = await gatewayClient.requestScreenshot(10000);
         const base64Data = result.imageBase64.replace(/^data:image\/png;base64,/, '');
         const sizeKB = Math.round(base64Data.length / 1024);
+
+        // Save to file for easy access
+        const fs = await import('fs');
+        const filePath = '/tmp/infinicanvas-screenshot.png';
+        fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
+
         return {
           content: [
             {
@@ -730,7 +736,7 @@ export function createMcpServer(gatewayClient: IGatewayClient): McpServer {
             },
             {
               type: 'text' as const,
-              text: `Screenshot captured: ${result.width}×${result.height} pixels (${sizeKB} KB base64)`,
+              text: `Screenshot captured: ${result.width}×${result.height} pixels (${sizeKB} KB). Saved to ${filePath}`,
             },
           ],
         };
