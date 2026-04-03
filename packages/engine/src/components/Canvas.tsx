@@ -155,6 +155,31 @@ function CanvasInner() {
     };
   }, [canvasRef]);
 
+  // ── Screenshot capture via render loop ────────────────────
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as {
+        requestId: string;
+        respond: (imageBase64: string, w: number, h: number) => void;
+      };
+      const canvas = canvasRef.current;
+      const loop = renderLoopRef.current;
+      if (!canvas || !loop) return;
+
+      // Capture AFTER the next render paint
+      loop.captureAfterPaint(() => {
+        try {
+          const imageBase64 = canvas.toDataURL('image/png');
+          detail.respond(imageBase64, canvas.width, canvas.height);
+        } catch {
+          detail.respond('', 0, 0);
+        }
+      });
+    };
+    window.addEventListener('infinicanvas-screenshot', handler);
+    return () => window.removeEventListener('infinicanvas-screenshot', handler);
+  }, [canvasRef]);
+
   // ── Resize observer ────────────────────────────────────────
 
   useEffect(() => {

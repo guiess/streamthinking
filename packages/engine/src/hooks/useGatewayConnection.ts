@@ -371,36 +371,25 @@ export function createGatewayConnection(
       }
 
       case 'screenshot-request': {
-        const canvas = document.querySelector('canvas');
-        const currentWs = ws;
         const reqId = (message as ScreenshotRequestInbound).requestId;
-        if (canvas && currentWs && currentWs.readyState === WebSocketImpl.OPEN) {
-          // Small delay to ensure current render frame completes
-          setTimeout(() => {
-            try {
-              const imageBase64 = canvas.toDataURL('image/png');
-              if (currentWs.readyState === WebSocketImpl.OPEN) {
+        const currentWs = ws;
+        // Dispatch a custom event that Canvas.tsx handles with render loop access
+        window.dispatchEvent(new CustomEvent('infinicanvas-screenshot', {
+          detail: {
+            requestId: reqId,
+            respond: (imageBase64: string, w: number, h: number) => {
+              if (currentWs && currentWs.readyState === WebSocketImpl.OPEN) {
                 currentWs.send(JSON.stringify({
                   type: 'screenshot-response',
                   requestId: reqId,
                   imageBase64,
-                  width: canvas.width,
-                  height: canvas.height,
+                  width: w,
+                  height: h,
                 }));
               }
-            } catch {
-              if (currentWs.readyState === WebSocketImpl.OPEN) {
-                currentWs.send(JSON.stringify({
-                  type: 'screenshot-response',
-                  requestId: reqId,
-                  imageBase64: '',
-                  width: 0,
-                  height: 0,
-                }));
-              }
-            }
-          }, 100);
-        }
+            },
+          },
+        }));
         break;
       }
     }

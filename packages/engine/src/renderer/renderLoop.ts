@@ -26,6 +26,7 @@ export interface RenderLoop {
   start(): void;
   stop(): void;
   updateSize(width: number, height: number): void;
+  captureAfterPaint(callback: () => void): void;
 }
 
 /** Callback that returns the current expression state for rendering. */
@@ -168,9 +169,18 @@ export function createRenderLoop(
       }
     }
 
+    // Screenshot capture — runs after painting, before next frame
+    if (screenshotCallback) {
+      const cb = screenshotCallback;
+      screenshotCallback = null;
+      cb();
+    }
+
     // Schedule next frame
     frameId = requestAnimationFrame(renderFrame);
   }
+
+  let screenshotCallback: (() => void) | null = null;
 
   return {
     start() {
@@ -190,6 +200,11 @@ export function createRenderLoop(
     updateSize(newWidth: number, newHeight: number) {
       width = newWidth;
       height = newHeight;
+    },
+
+    /** Schedule a callback to run right after the next paint (for screenshots). */
+    captureAfterPaint(callback: () => void) {
+      screenshotCallback = callback;
     },
   };
 }
