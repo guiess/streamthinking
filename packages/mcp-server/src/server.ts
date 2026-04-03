@@ -49,6 +49,7 @@ import {
 import {
   executeGetState,
   executeClear,
+  executeDeleteExpression,
   executeMorph,
   formatStructuredState,
 } from './tools/managementTools.js';
@@ -420,6 +421,18 @@ export function createMcpServer(gatewayClient: IGatewayClient): McpServer {
     {},
     async () => {
       const result = await executeClear(gatewayClient);
+      return { content: [{ type: 'text' as const, text: result }] };
+    },
+  );
+
+  server.tool(
+    'canvas_delete_expression',
+    'Delete one or more expressions from the canvas by their IDs. Use canvas_get_state or canvas_query to find expression IDs first.',
+    {
+      expressionIds: z.array(z.string()).min(1).describe('Array of expression IDs to delete'),
+    },
+    async (params) => {
+      const result = await executeDeleteExpression(gatewayClient, params.expressionIds);
       return { content: [{ type: 'text' as const, text: result }] };
     },
   );

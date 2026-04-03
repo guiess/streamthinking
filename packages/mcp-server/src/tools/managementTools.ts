@@ -98,6 +98,30 @@ export async function executeGetState(
   return formatCanvasState(expressions);
 }
 
+/** Delete specific expressions from the canvas by ID. */
+export async function executeDeleteExpression(
+  client: IGatewayClient,
+  expressionIds: string[],
+): Promise<string> {
+  const existing = client.getState();
+  const existingIds = new Set(existing.map((e) => e.id));
+
+  const found = expressionIds.filter((id) => existingIds.has(id));
+  const notFound = expressionIds.filter((id) => !existingIds.has(id));
+
+  if (found.length === 0) {
+    return `No matching expressions found. IDs not on canvas: ${notFound.join(', ')}`;
+  }
+
+  await client.sendDelete(found);
+
+  let msg = `Deleted ${found.length} expression(s).`;
+  if (notFound.length > 0) {
+    msg += ` ${notFound.length} ID(s) not found: ${notFound.join(', ')}`;
+  }
+  return msg;
+}
+
 /** Clear all expressions from the canvas. */
 export async function executeClear(
   client: IGatewayClient,
