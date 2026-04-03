@@ -402,7 +402,7 @@ export async function executeDrawFlowchart(
   const ids = new Map<string, { cx: number; cy: number }>();
 
   // Title
-  const titleExpr = buildText({ x: ox, y: oy, text: params.title, fontSize: 20, fontFamily: 'sans-serif', textAlign: 'left' });
+  const titleExpr = buildText({ x: ox, y: oy, text: params.title, fontSize: 18, fontFamily: 'sans-serif', textAlign: 'left' });
   await client.sendCreate(titleExpr);
 
   // Layout nodes in grid
@@ -450,7 +450,7 @@ export async function executeDrawSequenceDiagram(
   const ox = params.x ?? 0, oy = params.y ?? 0;
 
   // Title
-  await client.sendCreate(buildText({ x: ox, y: oy, text: params.title, fontSize: 20, fontFamily: 'sans-serif', textAlign: 'left' }));
+  await client.sendCreate(buildText({ x: ox, y: oy, text: params.title, fontSize: 18, fontFamily: 'sans-serif', textAlign: 'left' }));
 
   // Participants
   const pMap = new Map<string, number>();
@@ -575,7 +575,7 @@ export async function executeDrawRoadmap(
   const isHoriz = (params.orientation ?? 'horizontal') === 'horizontal';
 
   // Title
-  await client.sendCreate(buildText({ x: ox, y: oy, text: params.title, fontSize: 20, fontFamily: 'sans-serif', textAlign: 'left' }));
+  await client.sendCreate(buildText({ x: ox, y: oy, text: params.title, fontSize: 18, fontFamily: 'sans-serif', textAlign: 'left' }));
 
   const statusColors: Record<string, string> = { done: '#c8e6c9', 'in-progress': '#fff9c4', planned: '#f5f5f5' };
 
@@ -609,7 +609,7 @@ export async function executeDrawKanban(
   const ox = params.x ?? 0, oy = params.y ?? 0;
 
   // Title
-  await client.sendCreate(buildText({ x: ox, y: oy, text: params.title, fontSize: 20, fontFamily: 'sans-serif', textAlign: 'left' }));
+  await client.sendCreate(buildText({ x: ox, y: oy, text: params.title, fontSize: 18, fontFamily: 'sans-serif', textAlign: 'left' }));
 
   params.columns.forEach((col, ci) => {
     const cx = ox + ci * (P.colW + 20);

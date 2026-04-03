@@ -37,7 +37,7 @@ export function randomStickyColor(): string {
 
 /** Default text properties. */
 export const DEFAULT_TEXT = {
-  fontSize: 16,
+  fontSize: 14,
   fontFamily: 'sans-serif',
   textAlign: 'left' as const,
 };

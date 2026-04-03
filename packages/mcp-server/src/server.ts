@@ -103,7 +103,7 @@ export function createMcpServer(gatewayClient: IGatewayClient): McpServer {
 
   server.tool(
     'canvas_draw_rectangle',
-    'Draw a rectangle on the canvas. Use for boxes, containers, cards, or any rectangular element.',
+    'Draw a rectangle on the canvas. Use for boxes, containers, cards, or any rectangular element. Recommended sizes: small (120×60), medium (160×80), large (200×120). Leave 40-60px gaps between objects.',
     {
       x: z.number().describe('X position on the canvas'),
       y: z.number().describe('Y position on the canvas'),
@@ -150,7 +150,7 @@ export function createMcpServer(gatewayClient: IGatewayClient): McpServer {
 
   server.tool(
     'canvas_draw_arrow',
-    'Draw an arrow connecting multiple points. Use for directional connections, flow indicators, or pointers.',
+    'Draw an arrow connecting multiple points. Use for directional connections, flow indicators, or pointers. Connect to nearest edges: if target is below, use source bottom → target top. If target is right, use source right → target left.',
     {
       points: pointArraySchema.min(2).describe('Array of [x, y] coordinate pairs (minimum 2 points)'),
       label: z.string().optional().describe('Label text for the arrow'),
@@ -163,12 +163,12 @@ export function createMcpServer(gatewayClient: IGatewayClient): McpServer {
 
   server.tool(
     'canvas_draw_text',
-    'Place text on the canvas. Use for labels, headings, descriptions, or any textual content.',
+    'Place text on the canvas. Use for labels, headings, descriptions, or any textual content. Font sizes: title=18, label=14, body=12, caption=10. Use fontFamily \'sans-serif\' for clean text.',
     {
       x: z.number().describe('X position on the canvas'),
       y: z.number().describe('Y position on the canvas'),
       text: z.string().min(1).describe('The text content to display'),
-      fontSize: z.number().positive().optional().describe('Font size in pixels (default: 16)'),
+      fontSize: z.number().positive().optional().describe('Font size in pixels (default: 14)'),
       fontFamily: z.string().optional().describe('Font family name (default: "sans-serif")'),
     },
     async (params) => {
@@ -179,7 +179,7 @@ export function createMcpServer(gatewayClient: IGatewayClient): McpServer {
 
   server.tool(
     'canvas_add_sticky_note',
-    'Add a sticky note to the canvas. Use for quick notes, reminders, or informal annotations.',
+    'Add a sticky note to the canvas. Use for quick notes, reminders, or informal annotations. Good for annotations and card-style content. Default size 200×200. Use width/height params to customize.',
     {
       x: z.number().describe('X position on the canvas'),
       y: z.number().describe('Y position on the canvas'),
@@ -196,7 +196,7 @@ export function createMcpServer(gatewayClient: IGatewayClient): McpServer {
 
   server.tool(
     'canvas_draw_flowchart',
-    'Draw a flowchart diagram. Use for process flows, decision trees, algorithms, or any step-by-step visualization.',
+    'Draw a flowchart diagram. Use for process flows, decision trees, algorithms, or any step-by-step visualization. Nodes are auto-laid out in a grid with 60px horizontal and 80px vertical spacing.',
     {
       title: z.string().min(1).describe('Title of the flowchart'),
       nodes: z.array(z.object({
@@ -573,7 +573,7 @@ export function createMcpServer(gatewayClient: IGatewayClient): McpServer {
 
   server.tool(
     'canvas_place_stencil',
-    'Place a pre-built stencil icon on the canvas. Use for architecture diagrams with servers, databases, Kubernetes resources, Azure services, etc.',
+    'Place a pre-built stencil icon on the canvas. Use for architecture diagrams with servers, databases, Kubernetes resources, Azure services, etc. Check canvas_catalog for available stencils with sizes. Container stencils (zones, clusters) are 200×150+. Icon stencils are 44×44.',
     {
       stencilId: z.string().describe("Stencil identifier (e.g., 'server', 'k8s-pod', 'database')"),
       x: z.number().describe('X position on the canvas'),
