@@ -498,16 +498,18 @@ export async function executeDrawSequenceDiagram(
 
   // Participants
   const pMap = new Map<string, number>();
-  params.participants.forEach((p, i) => {
+  for (let i = 0; i < params.participants.length; i++) {
+    const p = params.participants[i]!;
     const cx = ox + i * P.lifelineGap + P.participantW / 2;
     pMap.set(p.id, cx);
     const expr = buildRectangle({ x: cx - P.participantW / 2, y: oy + 30, width: P.participantW, height: P.participantH, label: p.name, backgroundColor: '#e3f2fd', fillStyle: 'solid' });
-    client.sendCreate(expr);
-  });
+    await client.sendCreate(expr);
+  }
 
   // Messages as arrows
   const lastMsgY = oy + 30 + P.participantH + 30 + (params.messages.length - 1) * P.msgGap;
-  params.messages.forEach((msg, i) => {
+  for (let i = 0; i < params.messages.length; i++) {
+    const msg = params.messages[i]!;
     const fromX = pMap.get(msg.from) ?? ox;
     const toX = pMap.get(msg.to) ?? ox + 100;
     const y = oy + 30 + P.participantH + 30 + i * P.msgGap;
@@ -524,12 +526,12 @@ export async function executeDrawSequenceDiagram(
         { kind: 'arrow', points: pts, startArrowhead: 'none', endArrowhead: 'triangle', label: msg.label } as VisualExpression['data'],
         { strokeStyle: 'dashed' as const },
       );
-      client.sendCreate(expr);
+      await client.sendCreate(expr);
     } else {
       const arrow = buildArrow({ points: pts, endArrowhead: true, label: msg.label });
-      client.sendCreate(arrow);
+      await client.sendCreate(arrow);
     }
-  });
+  }
 
   // Lifelines — vertical dashed lines from participant bottom to below last message
   const lifelineEnd = lastMsgY + 40;
@@ -565,7 +567,7 @@ export async function executeDrawMindMap(
   let branchCount = 0;
   const branchW = 120, branchH = 36;
 
-  function layoutBranch(
+  async function layoutBranch(
     branch: MindMapBranch,
     cx: number, cy: number,
     angle: number, depth: number,
@@ -574,26 +576,28 @@ export async function executeDrawMindMap(
     const bx = cx + Math.cos(angle) * (P.branchRadial + depth * 80);
     const by = cy + Math.sin(angle) * (P.branchRadial + depth * 80);
     const rect = buildRectangle({ x: bx - branchW / 2, y: by - branchH / 2, width: branchW, height: branchH, label: branch.label, backgroundColor: '#fff9c4', fillStyle: 'solid' });
-    client.sendCreate(rect);
+    await client.sendCreate(rect);
     const childRect = { x: bx - branchW / 2, y: by - branchH / 2, width: branchW, height: branchH };
     const pts = smartArrowPoints(parentRect, childRect);
     const line = buildArrow({ points: pts });
-    client.sendCreate(line);
+    await client.sendCreate(line);
     branchCount++;
 
     if (branch.children) {
       const childAngleSpread = 0.4;
-      branch.children.forEach((child, i) => {
+      for (let i = 0; i < branch.children.length; i++) {
+        const child = branch.children[i]!;
         const childAngle = angle + (i - (branch.children.length - 1) / 2) * childAngleSpread;
-        layoutBranch(child, bx, by, childAngle, depth + 1, childRect);
-      });
+        await layoutBranch(child, bx, by, childAngle, depth + 1, childRect);
+      }
     }
   }
 
   const centerRect = { x: ox - centerW / 2, y: oy - centerH / 2, width: centerW, height: centerH };
-  params.branches.forEach((branch, i) => {
-    layoutBranch(branch, ox, oy, i * angleStep - Math.PI / 2, 0, centerRect);
-  });
+  for (let i = 0; i < params.branches.length; i++) {
+    const branch = params.branches[i]!;
+    await layoutBranch(branch, ox, oy, i * angleStep - Math.PI / 2, 0, centerRect);
+  }
 
   return `Created mind map '${params.centralTopic}' with ${branchCount} branches (primitives)`;
 }
@@ -671,24 +675,26 @@ export async function executeDrawRoadmap(
 
   const statusColors: Record<string, string> = { done: '#c8e6c9', 'in-progress': '#fff9c4', planned: '#f5f5f5' };
 
-  params.phases.forEach((phase, pi) => {
+  for (let pi = 0; pi < params.phases.length; pi++) {
+    const phase = params.phases[pi]!;
     const px = isHoriz ? ox + pi * (P.colW + 20) : ox;
     const py = isHoriz ? oy + 30 : oy + 30 + pi * 200;
 
     // Phase header
     const header = buildRectangle({ x: px, y: py, width: P.colW, height: P.headerH, label: phase.name, backgroundColor: '#e3f2fd', fillStyle: 'solid' });
-    client.sendCreate(header);
+    await client.sendCreate(header);
 
     // Items
-    phase.items.forEach((item, ii) => {
+    for (let ii = 0; ii < phase.items.length; ii++) {
+      const item = phase.items[ii]!;
       const iy = py + P.headerH + 10 + ii * (P.cardH + P.cardGap);
       const card = buildRectangle({
         x: px + 10, y: iy, width: P.colW - 20, height: P.cardH,
         label: item.title, backgroundColor: statusColors[item.status] ?? '#f5f5f5', fillStyle: 'solid',
       });
-      client.sendCreate(card);
-    });
-  });
+      await client.sendCreate(card);
+    }
+  }
 
   const totalItems = params.phases.reduce((s, p) => s + p.items.length, 0);
   return `Created roadmap '${params.title}' with ${params.phases.length} phases and ${totalItems} items (primitives)`;
@@ -703,24 +709,26 @@ export async function executeDrawKanban(
   // Title
   await client.sendCreate(buildText({ x: ox, y: oy, text: params.title, fontSize: 18, fontFamily: 'sans-serif', textAlign: 'left' }));
 
-  params.columns.forEach((col, ci) => {
+  for (let ci = 0; ci < params.columns.length; ci++) {
+    const col = params.columns[ci]!;
     const cx = ox + ci * (P.colW + 20);
     const cy = oy + 30;
 
     // Column header
     const header = buildRectangle({ x: cx, y: cy, width: P.colW, height: P.headerH, label: col.title, backgroundColor: '#e3f2fd', fillStyle: 'solid' });
-    client.sendCreate(header);
+    await client.sendCreate(header);
 
     // Cards
-    col.cards.forEach((card, ii) => {
+    for (let ii = 0; ii < col.cards.length; ii++) {
+      const card = col.cards[ii]!;
       const iy = cy + P.headerH + 10 + ii * (P.cardH + P.cardGap);
       const cardExpr = buildStickyNote({
         x: cx + 10, y: iy, width: P.colW - 20, height: P.cardH,
         text: card.description ? `${card.title}\n${card.description}` : card.title,
       });
-      client.sendCreate(cardExpr);
-    });
-  });
+      await client.sendCreate(cardExpr);
+    }
+  }
 
   const totalCards = params.columns.reduce((s, c) => s + c.cards.length, 0);
   return `Created kanban '${params.title}' with ${params.columns.length} columns and ${totalCards} cards (primitives)`;

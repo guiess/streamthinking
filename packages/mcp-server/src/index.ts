@@ -37,6 +37,14 @@ export {
   buildText,
   buildStickyNote,
 } from './tools/primitiveTools.js';
+export type {
+  DrawRectangleParams,
+  DrawEllipseParams,
+  DrawLineParams,
+  DrawArrowParams,
+  DrawTextParams,
+  AddStickyNoteParams,
+} from './tools/primitiveTools.js';
 
 // ── Composite tools ────────────────────────────────────────
 export {

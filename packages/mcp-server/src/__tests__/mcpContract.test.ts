@@ -72,6 +72,9 @@ function createMockClient(options?: {
     sendCreate: vi.fn(async () => {
       if (throwOnSend) throw new Error('Gateway connection lost');
     }),
+    sendBatchCreate: vi.fn(async () => {
+      if (throwOnSend) throw new Error('Gateway connection lost');
+    }),
     sendDelete: vi.fn(async () => {
       if (throwOnSend) throw new Error('Gateway connection lost');
     }),

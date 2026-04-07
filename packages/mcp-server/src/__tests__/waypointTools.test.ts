@@ -30,6 +30,7 @@ function createMockClient(options: {
     isConnected: () => connected,
     getSessionId: () => connected ? 'test-session' : null,
     sendCreate: vi.fn(),
+    sendBatchCreate: vi.fn(),
     sendDelete: vi.fn(),
     sendMorph: vi.fn(),
     sendStyle: vi.fn(),

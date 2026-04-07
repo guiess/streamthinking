@@ -23,6 +23,7 @@ function createMockGatewayClient(options?: {
     isConnected: vi.fn().mockReturnValue(!options?.connectThrows),
     getSessionId: vi.fn().mockReturnValue('test-session-1'),
     sendCreate: vi.fn().mockResolvedValue(undefined),
+    sendBatchCreate: vi.fn().mockResolvedValue(undefined),
     sendDelete: vi.fn().mockResolvedValue(undefined),
     sendMorph: vi.fn().mockResolvedValue(undefined),
     sendStyle: vi.fn().mockResolvedValue(undefined),

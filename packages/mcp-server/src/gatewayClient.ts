@@ -168,6 +168,8 @@ export interface IGatewayClient {
   getSessionId(): string | null;
   /** Send a create operation for a visual expression. */
   sendCreate(expression: VisualExpression): Promise<void>;
+  /** Send create operations for multiple expressions in sequence. */
+  sendBatchCreate(expressions: VisualExpression[]): Promise<void>;
   /** Send a delete operation for one or more expression IDs. */
   sendDelete(expressionIds: string[]): Promise<void>;
   /** Send a morph operation to change an expression's kind. */
@@ -325,6 +327,12 @@ export class GatewayClient implements IGatewayClient {
 
     // Update local state
     this.expressions.push(expression);
+  }
+
+  async sendBatchCreate(expressions: VisualExpression[]): Promise<void> {
+    for (const expression of expressions) {
+      await this.sendCreate(expression);
+    }
   }
 
   async sendDelete(expressionIds: string[]): Promise<void> {

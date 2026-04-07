@@ -10,8 +10,8 @@
  */
 
 import { useCallback, useState } from 'react';
-import { Canvas, useCanvasStore, morphExpression, screenToWorld } from '@infinicanvas/engine';
-import type { VisualExpression, ExpressionKind } from '@infinicanvas/protocol';
+import { Canvas, useCanvasStore, screenToWorld } from '@infinicanvas/engine';
+import type { VisualExpression } from '@infinicanvas/protocol';
 import { Toolbar } from './components/toolbar/Toolbar.js';
 import { StencilPalette } from './components/toolbar/StencilPalette.js';
 import { AgentActions } from './components/toolbar/AgentActions.js';
@@ -31,7 +31,6 @@ import { Settings } from 'lucide-react';
 
 export function App() {
   const addExpression = useCanvasStore((s) => s.addExpression);
-  const updateExpression = useCanvasStore((s) => s.updateExpression);
   const expressions = useCanvasStore((s) => s.expressions);
   const selectedIds = useCanvasStore((s) => s.selectedIds);
   const setSelectedIds = useCanvasStore((s) => s.setSelectedIds);
@@ -76,23 +75,6 @@ export function App() {
       setSelectedIds(new Set([centered.id]));
     },
     [addExpression, setSelectedIds],
-  );
-
-  // @ts-expect-error handleMorph reserved for future context menu integration
-  const handleMorph = useCallback(
-    (expressionId: string, toKind: ExpressionKind) => {
-      const expr = expressions[expressionId];
-      if (!expr) return;
-
-      const morphed = morphExpression(expr as VisualExpression, toKind);
-      if (!morphed) return;
-
-      updateExpression(expressionId, {
-        kind: morphed.kind,
-        data: morphed.data,
-      } as Partial<VisualExpression>);
-    },
-    [expressions, updateExpression],
   );
 
   /** Handle agent actions (emit events for MCP server). */
