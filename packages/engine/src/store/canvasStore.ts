@@ -19,6 +19,7 @@ import {
   protocolOperationSchema,
   expressionStyleSchema,
   DEFAULT_EXPRESSION_STYLE,
+  DEFAULT_LAYER_ID,
 } from '@infinicanvas/protocol';
 import type {
   VisualExpression,
@@ -33,8 +34,9 @@ import type {
   GroupPayload,
   UngroupPayload,
   ExpressionStyle,
+  Layer,
 } from '@infinicanvas/protocol';
-import type { CanvasState, CanvasActions, ToolType, Camera, CameraWaypoint, GridType } from '../types/index.js';
+import type { CanvasState, CanvasActions, ToolType, Camera, CameraWaypoint } from '../types/index.js';
 import { HistoryManager } from '../history/historyManager.js';
 import type { CanvasSnapshot } from '../history/historyManager.js';
 import { invalidateLayoutCache as invalidateFlowchartCache } from '../renderer/composites/flowchartRenderer.js';
@@ -75,6 +77,22 @@ const historyManager = new HistoryManager();
 
 /** Auto-incrementing counter for default waypoint labels ("View 1", "View 2", …). */
 let waypointCounter = 0;
+
+/** Auto-incrementing counter for default layer names ("Layer 2", "Layer 3", …). */
+let layerCounter = 1;
+
+/** Maximum number of layers allowed on a canvas. */
+const MAX_LAYERS = 100;
+
+/** Maximum length for a layer name. */
+const MAX_LAYER_NAME_LENGTH = 500;
+
+/** Check if an expression is on a locked layer. */
+function isOnLockedLayer(state: CanvasState, expr: VisualExpression): boolean {
+  const layerId = expr.layerId ?? DEFAULT_LAYER_ID;
+  const layer = state.layers.find((l) => l.id === layerId);
+  return layer?.locked ?? false;
+}
 
 /** Creates a ProtocolOperation with unique ID and current timestamp. */
 function createOperation(
@@ -344,6 +362,10 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
     pageVisible: true,
     pageSize: { width: 1122, height: 794 },
 
+    // ── Layer state (UI-only, no operations or snapshots) ──
+    layers: [{ id: DEFAULT_LAYER_ID, name: 'Layer 1', visible: true, locked: false, order: 0 }] as Layer[],
+    activeLayerId: DEFAULT_LAYER_ID,
+
     // ── Content mutations (emit ProtocolOperations + push snapshots) ──
 
     addExpression: (expression: VisualExpression) => {
@@ -366,8 +388,12 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
       historyManager.pushSnapshot(captureSnapshot(currentState));
 
       set((state) => {
-        state.expressions[expression.id] = expression;
-        state.expressionOrder.push(expression.id);
+        // Assign layerId from activeLayerId if not already set [#109]
+        const layeredExpr = expression.layerId
+          ? expression
+          : { ...expression, layerId: state.activeLayerId };
+        state.expressions[layeredExpr.id] = layeredExpr;
+        state.expressionOrder.push(layeredExpr.id);
 
         const operation = createOperation('create', {
           type: 'create',
@@ -398,6 +424,9 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
 
       // S5-3: Skip locked expressions
       if (existing.meta.locked) return;
+
+      // #109: Skip expressions on locked layers
+      if (isOnLockedLayer(currentState, existing)) return;
 
       // Push snapshot BEFORE mutation [AC8]
       historyManager.pushSnapshot(captureSnapshot(currentState));
@@ -474,10 +503,10 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
 
       const currentState = get();
 
-      // Filter to only IDs that actually exist and are not locked [S5-3]
+      // Filter to only IDs that actually exist and are not locked [S5-3] [#109]
       const existingIds = ids.filter((id) => {
         const expr = currentState.expressions[id];
-        return expr && !expr.meta.locked;
+        return expr && !expr.meta.locked && !isOnLockedLayer(currentState, expr);
       });
       if (existingIds.length === 0) {
         return;
@@ -791,10 +820,10 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
 
       const currentState = get();
 
-      // Filter to only IDs that exist and are not locked
+      // Filter to only IDs that exist and are not locked (expression or layer)
       const validIds = ids.filter((id) => {
         const expr = currentState.expressions[id];
-        return expr && !expr.meta.locked;
+        return expr && !expr.meta.locked && !isOnLockedLayer(currentState, expr);
       });
       if (validIds.length === 0) return;
 
@@ -837,11 +866,19 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
     ) => {
       if (moves.length === 0) return;
 
+      const currentState = get();
+
+      // #109: Filter out moves for expressions on locked layers
+      const allowedMoves = moves.filter((m) => {
+        const expr = currentState.expressions[m.id];
+        return expr && !isOnLockedLayer(currentState, expr);
+      });
+      if (allowedMoves.length === 0) return;
+
       // Build a snapshot reflecting pre-drag positions (expressions may
       // already be at 'to' positions from transient drag updates).
-      const currentState = get();
       const snapshot = captureSnapshot(currentState);
-      for (const move of moves) {
+      for (const move of allowedMoves) {
         const expr = snapshot.expressions[move.id];
         if (expr) {
           expr.position = { ...move.from };
@@ -852,9 +889,9 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
       historyManager.pushSnapshot(snapshot);
 
       set((state) => {
-        const movedIds = new Set(moves.map((m) => m.id));
+        const movedIds = new Set(allowedMoves.map((m) => m.id));
 
-        for (const move of moves) {
+        for (const move of allowedMoves) {
           const expr = state.expressions[move.id];
           if (expr) {
             expr.position = { ...move.to };
@@ -882,7 +919,7 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
         updateBoundArrows(state, movedIds);
 
         // Re-snap moved arrows to nearby shapes
-        for (const move of moves) {
+        for (const move of allowedMoves) {
           const expr = state.expressions[move.id];
           if (!expr || expr.kind !== 'arrow') continue;
 
@@ -916,7 +953,7 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
           }
         }
 
-        for (const move of moves) {
+        for (const move of allowedMoves) {
           const operation = createOperation('move', {
             type: 'move',
             expressionId: move.id,
@@ -937,14 +974,16 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
       final: { position: { x: number; y: number }; size: { width: number; height: number } },
     ) => {
       const currentState = get();
-      if (!currentState.expressions[id]) return;
+      const target = currentState.expressions[id];
+      if (!target) return;
+      if (isOnLockedLayer(currentState, target)) return;
 
       // Build a snapshot reflecting pre-resize state.
       const snapshot = captureSnapshot(currentState);
-      const expr = snapshot.expressions[id];
-      if (expr) {
-        expr.position = { ...original.position };
-        expr.size = { ...original.size };
+      const snapshotExpr = snapshot.expressions[id];
+      if (snapshotExpr) {
+        snapshotExpr.position = { ...original.position };
+        snapshotExpr.size = { ...original.size };
       }
       historyManager.pushSnapshot(snapshot);
 
@@ -986,8 +1025,11 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
     groupExpressions: (ids: string[]): string => {
       const currentState = get();
 
-      // Filter to only IDs that actually exist
-      const validIds = ids.filter((id) => currentState.expressions[id]);
+      // Filter to only IDs that actually exist and are not on a locked layer
+      const validIds = ids.filter((id) => {
+        const expr = currentState.expressions[id];
+        return expr && !isOnLockedLayer(currentState, expr);
+      });
       if (validIds.length < 2) return '';
 
       // Push snapshot BEFORE mutation for undo support
@@ -1020,9 +1062,12 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
     ungroupExpressions: (groupId: string) => {
       const currentState = get();
 
-      // Find all expressions with this parentId
+      // Find all expressions with this parentId, excluding those on locked layers
       const memberIds = Object.keys(currentState.expressions).filter(
-        (id) => currentState.expressions[id]?.parentId === groupId,
+        (id) => {
+          const expr = currentState.expressions[id];
+          return expr?.parentId === groupId && !isOnLockedLayer(currentState, expr);
+        },
       );
       if (memberIds.length === 0) return;
 
@@ -1350,6 +1395,129 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
         state.pageSize = { width: size.width, height: size.height };
       });
     },
+
+    // ── Layer actions (UI-only — NO operations, NO snapshots) ─────
+
+    addLayer: (name?: string): string => {
+      const { layers } = get();
+      // Enforce layer cap [CLEAN-CODE]
+      if (layers.length >= MAX_LAYERS) return '';
+
+      layerCounter += 1;
+      const id = nanoid();
+      const maxOrder = layers.reduce((max, l) => Math.max(max, l.order), -1);
+      const rawName = name ?? `Layer ${layerCounter}`;
+      const layerName = rawName.slice(0, MAX_LAYER_NAME_LENGTH);
+
+      set((state) => {
+        state.layers.push({
+          id,
+          name: layerName,
+          visible: true,
+          locked: false,
+          order: maxOrder + 1,
+        });
+      });
+
+      return id;
+    },
+
+    removeLayer: (layerId: string) => {
+      // Cannot remove the default layer
+      if (layerId === DEFAULT_LAYER_ID) return;
+
+      const { layers } = get();
+      if (!layers.find((l) => l.id === layerId)) return;
+
+      set((state) => {
+        // Move all expressions from the deleted layer to the default layer
+        for (const expr of Object.values(state.expressions)) {
+          if (expr.layerId === layerId) {
+            expr.layerId = DEFAULT_LAYER_ID;
+          }
+        }
+
+        // Remove the layer
+        state.layers = state.layers.filter((l) => l.id !== layerId);
+
+        // Reset active layer if it was removed
+        if (state.activeLayerId === layerId) {
+          state.activeLayerId = DEFAULT_LAYER_ID;
+        }
+      });
+    },
+
+    renameLayer: (layerId: string, name: string) => {
+      const truncated = name.slice(0, MAX_LAYER_NAME_LENGTH);
+      set((state) => {
+        const layer = state.layers.find((l) => l.id === layerId);
+        if (layer) {
+          layer.name = truncated;
+        }
+      });
+    },
+
+    toggleLayerVisibility: (layerId: string) => {
+      set((state) => {
+        const layer = state.layers.find((l) => l.id === layerId);
+        if (layer) {
+          layer.visible = !layer.visible;
+        }
+      });
+    },
+
+    toggleLayerLock: (layerId: string) => {
+      set((state) => {
+        const layer = state.layers.find((l) => l.id === layerId);
+        if (layer) {
+          layer.locked = !layer.locked;
+        }
+      });
+    },
+
+    setActiveLayer: (layerId: string) => {
+      const { layers } = get();
+      if (!layers.find((l) => l.id === layerId)) return;
+      set((state) => {
+        state.activeLayerId = layerId;
+      });
+    },
+
+    reorderLayers: (layerIds: string[]) => {
+      const { layers } = get();
+      // Validate: all provided IDs must match existing layers
+      const existingIds = new Set(layers.map((l) => l.id));
+      const allValid = layerIds.every((id) => existingIds.has(id));
+      if (!allValid || layerIds.length !== layers.length) return;
+
+      set((state) => {
+        // Reorder layers and reassign order values
+        const layerMap = new Map(state.layers.map((l) => [l.id, l]));
+        state.layers = layerIds
+          .map((id, index) => {
+            const layer = layerMap.get(id)!;
+            layer.order = index;
+            return layer;
+          });
+      });
+    },
+
+    moveToLayer: (expressionIds: string[], layerId: string) => {
+      const { layers } = get();
+
+      // Validate target layer exists
+      if (!layers.find((l) => l.id === layerId)) return;
+
+      set((state) => {
+        for (const id of expressionIds) {
+          const expr = state.expressions[id];
+          if (!expr) continue;
+          // Skip locked expressions
+          if (expr.meta.locked) continue;
+          expr.layerId = layerId;
+        }
+      });
+    },
   })),
 );
 
@@ -1359,4 +1527,12 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
  */
 export function _resetWaypointCounter(): void {
   waypointCounter = 0;
+}
+
+/**
+ * Reset layer counter. Exported for test cleanup only.
+ * @internal
+ */
+export function _resetLayerCounter(): void {
+  layerCounter = 1;
 }

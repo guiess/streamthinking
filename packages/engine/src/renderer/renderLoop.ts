@@ -8,6 +8,7 @@
  */
 
 import type { VisualExpression } from '@infinicanvas/protocol';
+import { DEFAULT_LAYER_ID } from '@infinicanvas/protocol';
 import type { RoughCanvas } from 'roughjs/bin/canvas.js';
 import type { Camera, GridType } from '../types/index.js';
 import type { DrawPreview } from '../tools/BaseTool.js';
@@ -43,6 +44,14 @@ export interface ExpressionProvider {
 export interface SelectionProvider {
   /** Set of currently selected expression IDs. */
   getSelectedIds(): Set<string>;
+}
+
+/** Callback that returns layer visibility and ordering info for rendering. */
+export interface LayerProvider {
+  /** Set of layer IDs whose expressions should be rendered. */
+  getVisibleLayerIds(): Set<string>;
+  /** Get expression order sorted by layer order, then by position in expressionOrder. */
+  getLayerSortedOrder(expressionOrder: string[], expressions: Record<string, VisualExpression>): string[];
 }
 
 /** Callback that returns the current draw preview for rendering. */
@@ -107,6 +116,7 @@ export function createRenderLoop(
   editingProvider?: EditingProvider,
   gridProvider?: GridProvider,
   pageProvider?: PageProvider,
+  layerProvider?: LayerProvider,
 ): RenderLoop {
   let width = initialWidth;
   let height = initialHeight;
@@ -141,13 +151,28 @@ export function createRenderLoop(
       renderGrid(ctx, camera, width, height, gridType, gridSize);
     }
 
-    // 4. Render expressions in z-order [AC1]
+    // 4. Render expressions in z-order [AC1], filtered by visible layers [#109]
     if (roughCanvas && expressionProvider) {
+      const expressions = expressionProvider.getExpressions();
+      let order = expressionProvider.getExpressionOrder();
+
+      // Apply layer sorting and visibility filtering
+      if (layerProvider) {
+        order = layerProvider.getLayerSortedOrder(order, expressions);
+        const visibleLayerIds = layerProvider.getVisibleLayerIds();
+        order = order.filter((id) => {
+          const expr = expressions[id];
+          if (!expr) return false;
+          const layerId = expr.layerId ?? DEFAULT_LAYER_ID;
+          return visibleLayerIds.has(layerId);
+        });
+      }
+
       renderExpressions(
         ctx,
         roughCanvas,
-        expressionProvider.getExpressions(),
-        expressionProvider.getExpressionOrder(),
+        expressions,
+        order,
         camera,
         width,
         height,

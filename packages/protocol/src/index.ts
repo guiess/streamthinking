@@ -70,7 +70,10 @@ export type {
   ExpressionData,
   ExpressionKind,
   VisualExpression,
+  Layer,
 } from './schema/expressions.js';
+
+export { DEFAULT_LAYER_ID } from './schema/expressions.js';
 
 export type {
   OperationType,
