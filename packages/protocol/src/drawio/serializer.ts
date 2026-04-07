@@ -33,7 +33,24 @@ function escapeXml(text: string): string {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+/**
+ * Unescape standard XML entities.
+ *
+ * Required because `processEntities: false` in fast-xml-parser disables
+ * ALL entity processing (including the 5 predefined XML entities).
+ * We re-enable just the safe, predefined set here.
+ */
+function unescapeXml(text: string): string {
+  return text
+    .replace(/&apos;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&gt;/g, '>')
+    .replace(/&lt;/g, '<')
+    .replace(/&amp;/g, '&');
 }
 
 /** Render an XML attribute if the value is defined. */
@@ -96,9 +113,13 @@ function buildStyleString(expr: VisualExpression): string {
     parts.push(`opacity=${Math.round(style.opacity * 100)}`);
   }
 
-  // Dashed/dotted
-  if (style.strokeStyle === 'dashed' || style.strokeStyle === 'dotted') {
+  // Dashed/dotted with distinct dash patterns for round-trip fidelity
+  if (style.strokeStyle === 'dashed') {
     parts.push('dashed=1');
+    parts.push('dashPattern=8 5');
+  } else if (style.strokeStyle === 'dotted') {
+    parts.push('dashed=1');
+    parts.push('dashPattern=1 3');
   }
 
   // Rounded for rectangles
@@ -136,6 +157,11 @@ function buildStyleString(expr: VisualExpression): string {
 
   parts.push('whiteSpace=wrap');
   parts.push('html=1');
+
+  // Rotation angle (only when non-zero)
+  if (expr.angle !== 0) {
+    parts.push(`rotation=${expr.angle}`);
+  }
 
   return parts.join(';') + ';';
 }
@@ -279,6 +305,7 @@ function resolveKindFromStyle(
   const shapeIdent = styleMap.get('__shape__');
 
   if (shapeValue === 'note') return 'sticky-note';
+  if (shapeValue?.startsWith('mxgraph.')) return 'stencil';
   if (shapeIdent === 'ellipse') return 'ellipse';
   if (shapeIdent === 'rhombus') return 'diamond';
   if (shapeIdent === 'text') return 'text';
@@ -312,7 +339,11 @@ function styleMapToExpressionStyle(styleMap: Map<string, string>): ExpressionSty
 
   const dashed = styleMap.get('dashed');
   if (dashed === '1') {
-    style.strokeStyle = 'dashed';
+    // Distinguish dotted vs dashed via dashPattern
+    const dashPattern = styleMap.get('dashPattern') ?? '';
+    const segments = dashPattern.split(/\s+/).filter(Boolean).map(Number);
+    const hasShortSegments = segments.length >= 2 && (segments[0] ?? 0) <= 3;
+    style.strokeStyle = hasShortSegments ? 'dotted' : 'dashed';
   }
 
   const fontSize = styleMap.get('fontSize');
@@ -366,6 +397,20 @@ interface ParsedPoint {
   '@_as'?: string;
 }
 
+/** Maximum input size for XML import (10 MB). */
+const MAX_INPUT_SIZE = 10_000_000;
+
+/** Sanitize a numeric value: replace NaN/Infinity with a fallback. */
+function sanitizeNum(value: number, fallback: number): number {
+  return Number.isFinite(value) ? value : fallback;
+}
+
+/** Clamp a dimension value: non-negative and finite. */
+function clampDimension(value: number): number {
+  const n = sanitizeNum(value, 0);
+  return n < 0 ? 0 : n;
+}
+
 /** Extract geometry (position/size) from a parsed mxGeometry element. */
 function extractGeometry(geo: ParsedGeometry | undefined): {
   position: { x: number; y: number };
@@ -380,12 +425,12 @@ function extractGeometry(geo: ParsedGeometry | undefined): {
 
   return {
     position: {
-      x: Number(geo['@_x'] ?? 0),
-      y: Number(geo['@_y'] ?? 0),
+      x: sanitizeNum(Number(geo['@_x'] ?? 0), 0),
+      y: sanitizeNum(Number(geo['@_y'] ?? 0), 0),
     },
     size: {
-      width: Number(geo['@_width'] ?? 100),
-      height: Number(geo['@_height'] ?? 100),
+      width: clampDimension(Number(geo['@_width'] ?? 100)),
+      height: clampDimension(Number(geo['@_height'] ?? 100)),
     },
   };
 }
@@ -435,10 +480,33 @@ function buildExpressionData(
       const fillColor = styleMap.get('fillColor') ?? '#FFEB3B';
       return { kind: 'sticky-note', text: value, color: fillColor } as StickyNoteData;
     }
+    case 'stencil': {
+      const shapeValue = styleMap.get('shape') ?? '';
+      const stencilId = shapeValue.startsWith('mxgraph.') ? shapeValue.slice('mxgraph.'.length) : shapeValue;
+      return {
+        kind: 'stencil',
+        stencilId,
+        category: 'imported',
+        label: value || undefined,
+      } as StencilData;
+    }
     case 'arrow': {
       const waypoints = extractWaypoints(geo);
       // Build points: source → waypoints → target (use [0,0] for unspecified endpoints)
       const allPoints: [number, number][] = [[0, 0], ...waypoints, [0, 0]];
+
+      // Extract sourcePoint/targetPoint from geometry (same as line)
+      if (geo?.mxPoint) {
+        const geoPoints = Array.isArray(geo.mxPoint) ? geo.mxPoint : [geo.mxPoint];
+        const sourcePoint = geoPoints.find((p) => p['@_as'] === 'sourcePoint');
+        const targetPoint = geoPoints.find((p) => p['@_as'] === 'targetPoint');
+        if (sourcePoint) {
+          allPoints[0] = [Number(sourcePoint['@_x'] ?? 0), Number(sourcePoint['@_y'] ?? 0)];
+        }
+        if (targetPoint) {
+          allPoints[allPoints.length - 1] = [Number(targetPoint['@_x'] ?? 0), Number(targetPoint['@_y'] ?? 0)];
+        }
+      }
 
       const arrowData: ArrowData = { kind: 'arrow', points: allPoints, label: value || undefined };
 
@@ -484,15 +552,23 @@ function buildExpressionData(
  * @returns Array of VisualExpressions
  */
 export function drawioToExpressions(xml: string): VisualExpression[] {
+  if (xml.length > MAX_INPUT_SIZE) {
+    throw new Error(`draw.io XML input too large: ${xml.length} bytes exceeds ${MAX_INPUT_SIZE} byte limit`);
+  }
+
   const parser = new XMLParser({
     ignoreAttributes: false,
     attributeNamePrefix: '@_',
+    processEntities: false,
     isArray: (tagName) => tagName === 'mxCell' || tagName === 'mxPoint',
   });
 
-  const parsed = parser.parse(xml) as {
-    mxGraphModel?: { root?: { mxCell?: ParsedMxCell[] } };
-  };
+  let parsed: { mxGraphModel?: { root?: { mxCell?: ParsedMxCell[] } } };
+  try {
+    parsed = parser.parse(xml) as typeof parsed;
+  } catch {
+    return [];
+  }
 
   const cells = parsed.mxGraphModel?.root?.mxCell;
   if (!cells) return [];
@@ -509,7 +585,7 @@ export function drawioToExpressions(xml: string): VisualExpression[] {
     const styleMap = parseStyleString(styleStr);
     const isEdge = cell['@_edge'] === '1';
     const kind = resolveKindFromStyle(styleMap, isEdge);
-    const value = cell['@_value'] ?? '';
+    const value = unescapeXml(cell['@_value'] ?? '');
 
     const geo = cell.mxGeometry;
     const { position, size } = isEdge
@@ -519,12 +595,16 @@ export function drawioToExpressions(xml: string): VisualExpression[] {
     const expressionStyle = styleMapToExpressionStyle(styleMap);
     const data = buildExpressionData(kind, value, styleMap, cell, geo);
 
+    // Parse rotation angle from style (Finding #7)
+    const rotationStr = styleMap.get('rotation');
+    const angle = rotationStr !== undefined ? sanitizeNum(Number(rotationStr), 0) : 0;
+
     const expr: VisualExpression = {
       id,
       kind,
       position,
       size,
-      angle: 0,
+      angle,
       style: expressionStyle,
       meta: {
         author: { type: 'agent', id: 'drawio-import', name: 'draw.io Import', provider: 'infinicanvas' },

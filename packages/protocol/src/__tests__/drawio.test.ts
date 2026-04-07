@@ -704,3 +704,197 @@ describe('round-trip fidelity', () => {
     expect(data.endBinding?.expressionId).toBe('tgt');
   });
 });
+
+// ── Finding fix tests ─────────────────────────────────────
+
+describe('stencil import (Finding #1)', () => {
+  it('should import shape=mxgraph.server as a stencil', () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<mxGraphModel>
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="st1" value="Web Server" style="shape=mxgraph.server;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+      <mxGeometry x="10" y="20" width="44" height="44" as="geometry"/>
+    </mxCell>
+  </root>
+</mxGraphModel>`;
+
+    const result = drawioToExpressions(xml);
+    expect(result).toHaveLength(1);
+    expect(result[0]!.kind).toBe('stencil');
+    const data = result[0]!.data as { stencilId: string; category: string; label?: string };
+    expect(data.stencilId).toBe('server');
+    expect(data.category).toBe('imported');
+    expect(data.label).toBe('Web Server');
+  });
+
+  it('should round-trip a stencil expression', () => {
+    const stencil = makeExpression({
+      id: 'st-rt',
+      position: { x: 50, y: 50 },
+      size: { width: 44, height: 44 },
+      data: {
+        kind: 'stencil',
+        stencilId: 'database',
+        category: 'generic-it',
+        label: 'Main DB',
+      },
+    });
+
+    const xml = expressionsToDrawio([stencil]);
+    const result = drawioToExpressions(xml);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]!.kind).toBe('stencil');
+    const data = result[0]!.data as { stencilId: string; label?: string };
+    expect(data.stencilId).toBe('database');
+    expect(data.label).toBe('Main DB');
+  });
+});
+
+describe('security hardening (Finding #2, #3, #4)', () => {
+  it('should throw on oversized input', () => {
+    const hugeXml = '<mxGraphModel>' + 'x'.repeat(10_000_001) + '</mxGraphModel>';
+    expect(() => drawioToExpressions(hugeXml)).toThrow('too large');
+  });
+
+  it('should return empty array for malformed XML instead of crashing', () => {
+    const broken = '<<<not xml at all>>>';
+    const result = drawioToExpressions(broken);
+    expect(result).toEqual([]);
+  });
+
+  it('should sanitize NaN geometry values to defaults', () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<mxGraphModel>
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="nan1" value="Bad" style="" vertex="1" parent="1">
+      <mxGeometry x="abc" y="def" width="NaN" height="-50" as="geometry"/>
+    </mxCell>
+  </root>
+</mxGraphModel>`;
+
+    const result = drawioToExpressions(xml);
+    expect(result).toHaveLength(1);
+    expect(Number.isFinite(result[0]!.position.x)).toBe(true);
+    expect(Number.isFinite(result[0]!.position.y)).toBe(true);
+    expect(result[0]!.size.width).toBeGreaterThanOrEqual(0);
+    expect(result[0]!.size.height).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe('apostrophe escape (Finding #5)', () => {
+  it('should escape apostrophes in labels', () => {
+    const expr = makeExpression({
+      id: 'apos-1',
+      data: { kind: 'rectangle', label: "it's a test" },
+    });
+    const xml = expressionsToDrawio([expr]);
+    expect(xml).toContain('it&apos;s a test');
+  });
+});
+
+describe('dotted vs dashed distinction (Finding #6)', () => {
+  it('should export dotted with dashPattern=1 3', () => {
+    const dotted = makeExpression({
+      id: 'dot-1',
+      style: { ...baseStyle, strokeStyle: 'dotted' },
+      data: { kind: 'rectangle' },
+    });
+    const xml = expressionsToDrawio([dotted]);
+    expect(xml).toContain('dashed=1');
+    expect(xml).toContain('dashPattern=1 3');
+  });
+
+  it('should export dashed with dashPattern=8 5', () => {
+    const dashed = makeExpression({
+      id: 'dash-1',
+      style: { ...baseStyle, strokeStyle: 'dashed' },
+      data: { kind: 'rectangle' },
+    });
+    const xml = expressionsToDrawio([dashed]);
+    expect(xml).toContain('dashed=1');
+    expect(xml).toContain('dashPattern=8 5');
+  });
+
+  it('should round-trip dotted and dashed distinctly', () => {
+    const dotted = makeExpression({
+      id: 'dot-rt',
+      style: { ...baseStyle, strokeStyle: 'dotted' },
+      data: { kind: 'rectangle', label: 'Dotted' },
+    });
+    const dashed = makeExpression({
+      id: 'dash-rt',
+      style: { ...baseStyle, strokeStyle: 'dashed' },
+      data: { kind: 'rectangle', label: 'Dashed' },
+    });
+
+    const xml = expressionsToDrawio([dotted, dashed]);
+    const result = drawioToExpressions(xml);
+
+    expect(result[0]!.style.strokeStyle).toBe('dotted');
+    expect(result[1]!.style.strokeStyle).toBe('dashed');
+  });
+});
+
+describe('rotation angle (Finding #7)', () => {
+  it('should export rotation when angle is non-zero', () => {
+    const rotated = makeExpression({
+      id: 'rot-1',
+      angle: 45,
+      data: { kind: 'rectangle', label: 'Tilted' },
+    });
+    const xml = expressionsToDrawio([rotated]);
+    expect(xml).toContain('rotation=45');
+  });
+
+  it('should not export rotation when angle is 0', () => {
+    const noRot = makeExpression({
+      id: 'norot-1',
+      angle: 0,
+      data: { kind: 'rectangle' },
+    });
+    const xml = expressionsToDrawio([noRot]);
+    expect(xml).not.toContain('rotation=');
+  });
+
+  it('should round-trip rotation angle', () => {
+    const rotated = makeExpression({
+      id: 'rot-rt',
+      angle: 90,
+      data: { kind: 'rectangle', label: 'Rotated' },
+    });
+
+    const xml = expressionsToDrawio([rotated]);
+    const result = drawioToExpressions(xml);
+
+    expect(result[0]!.angle).toBe(90);
+  });
+});
+
+describe('arrow endpoint extraction (Finding #8)', () => {
+  it('should extract sourcePoint/targetPoint from arrow geometry', () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<mxGraphModel>
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="a1" style="" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="50" y="60" as="sourcePoint"/>
+        <mxPoint x="200" y="300" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+  </root>
+</mxGraphModel>`;
+
+    const result = drawioToExpressions(xml);
+    expect(result).toHaveLength(1);
+    const points = (result[0]!.data as { points: [number, number][] }).points;
+    expect(points[0]).toEqual([50, 60]);
+    expect(points[points.length - 1]).toEqual([200, 300]);
+  });
+});
