@@ -21,7 +21,7 @@ import type { DrawableCache } from './drawableCache.js';
 import { getCompositeRenderer } from './compositeRegistry.js';
 import { resolveBindings } from '../interaction/connectorHelpers.js';
 import { computeOrthogonalRoute } from '../connectors/orthogonalRouter.js';
-import { getStencil, svgToDataUri } from './stencils/index.js';
+import { STENCIL_CATALOG, svgToDataUri } from './stencils/index.js';
 import { resolveTextConfig } from '../text/textConfig.js';
 
 // ── Constants ────────────────────────────────────────────────
@@ -692,7 +692,7 @@ function renderStencil(
   const { x, y } = expr.position;
   const { width, height } = expr.size;
 
-  const entry = getStencil(stencilId);
+  const entry = STENCIL_CATALOG.get(stencilId);
 
   if (!entry) {
     // Unknown stencil — render labeled placeholder box
