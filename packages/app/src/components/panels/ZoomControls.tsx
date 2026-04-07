@@ -18,7 +18,7 @@ import {
   computeFitToContent,
   ZOOM_STEP,
 } from '@infinicanvas/engine';
-import { ZoomIn, ZoomOut, Maximize } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, Grid3x3 } from 'lucide-react';
 import type { VisualExpression } from '@infinicanvas/protocol';
 
 /** Button size in pixels. */
@@ -30,6 +30,7 @@ const ICON_SIZE = 16;
 /** ZoomControls — bottom-right zoom panel. */
 export function ZoomControls() {
   const camera = useCanvasStore((s) => s.camera);
+  const gridVisible = useCanvasStore((s) => s.gridVisible);
 
   const handleZoomIn = useCallback(() => {
     const { camera: cam, setCamera: setCam } = useCanvasStore.getState();
@@ -61,6 +62,10 @@ export function ZoomControls() {
       viewportHeight,
     );
     setCam(newCamera);
+  }, []);
+
+  const handleToggleGrid = useCallback(() => {
+    useCanvasStore.getState().toggleGrid();
   }, []);
 
   const zoomPercent = Math.round(camera.zoom * 100);
@@ -130,6 +135,23 @@ export function ZoomControls() {
         style={buttonStyle}
       >
         <Maximize size={ICON_SIZE} />
+      </button>
+
+      {/* Grid toggle */}
+      <button
+        type="button"
+        data-testid="grid-toggle"
+        aria-label={gridVisible ? 'Hide grid' : 'Show grid'}
+        title={gridVisible ? "Hide grid (Ctrl+')" : "Show grid (Ctrl+')"}
+        onClick={handleToggleGrid}
+        style={{
+          ...buttonStyle,
+          color: gridVisible
+            ? 'var(--accent, #4A90D9)'
+            : 'var(--text-primary, #333333)',
+        }}
+      >
+        <Grid3x3 size={ICON_SIZE} />
       </button>
     </div>
   );
