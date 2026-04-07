@@ -55,6 +55,7 @@ export function getExpressionLabel(expr: VisualExpression): string | undefined {
     case 'wireframe':
     case 'roadmap':
     case 'kanban':
+    case 'container':
       return data.title;
     case 'sequence-diagram':
       return data.title;
@@ -191,6 +192,14 @@ function createMinimalData(
       };
     case 'sticky-note':
       return { kind: 'sticky-note', text: label ?? '', color: '#FFEB3B' };
+    case 'container':
+      return {
+        kind: 'container',
+        title: label ?? 'Container',
+        headerHeight: 40,
+        padding: 20,
+        collapsed: false,
+      };
     default:
       // For complex kinds, we can't create meaningful minimal data
       // Return a rectangle as a safe fallback
