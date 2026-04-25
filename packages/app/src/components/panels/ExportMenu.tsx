@@ -14,6 +14,12 @@ import { exportToJson, importFromJson, buildSvgString, downloadSvg, exportToPng 
 import { expressionsToDrawio, drawioToExpressions } from '@infinicanvas/protocol';
 import { Download } from 'lucide-react';
 
+/** Props for ExportMenu. */
+interface ExportMenuProps {
+  /** Share current canvas as a URL (from useUrlCanvas hook). */
+  shareAsUrl?: () => { success: boolean; url?: string; error?: string; byteLength?: number };
+}
+
 /** Menu option definition. */
 interface MenuOption {
   action: string;
@@ -22,8 +28,9 @@ interface MenuOption {
 }
 
 /** Export/Import menu dropdown component. */
-export function ExportMenu() {
+export function ExportMenu({ shareAsUrl }: ExportMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const drawioFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -105,6 +112,19 @@ export function ExportMenu() {
     setIsOpen(false);
   }, []);
 
+  const handleShareAsUrl = useCallback(() => {
+    if (!shareAsUrl) return;
+    const result = shareAsUrl();
+    if (result.success) {
+      setFeedback('URL copied to clipboard!');
+    } else {
+      setFeedback(result.error ?? 'Share failed');
+    }
+    setIsOpen(false);
+    // Clear feedback after 3 seconds
+    setTimeout(() => setFeedback(null), 3000);
+  }, [shareAsUrl]);
+
   const handleDrawioFileSelected = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -171,6 +191,9 @@ export function ExportMenu() {
     { action: 'export-drawio', label: 'Export .drawio', onClick: handleExportDrawio },
     { action: 'import-json', label: 'Import JSON', onClick: handleImportJson },
     { action: 'import-drawio', label: 'Import .drawio', onClick: handleImportDrawio },
+    ...(shareAsUrl
+      ? [{ action: 'share-url', label: 'Share as URL', onClick: handleShareAsUrl }]
+      : []),
   ];
 
   return (
@@ -258,6 +281,31 @@ export function ExportMenu() {
         style={{ display: 'none' }}
         aria-hidden="true"
       />
+
+      {/* Feedback toast for share actions */}
+      {feedback && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            marginTop: 4,
+            padding: '6px 12px',
+            fontSize: 12,
+            backgroundColor: 'var(--bg-toolbar, #ffffff)',
+            border: '1px solid var(--border, #e0e0e0)',
+            borderRadius: 6,
+            boxShadow: '0 2px 8px var(--shadow, rgba(0,0,0,0.12))',
+            whiteSpace: 'nowrap',
+            color: 'var(--text-primary, #333333)',
+            zIndex: 100,
+          }}
+        >
+          {feedback}
+        </div>
+      )}
     </div>
   );
 }
