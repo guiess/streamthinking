@@ -17,6 +17,7 @@ import {
   encodeCanvasForUrl,
   decodeCanvasFromUrl,
 } from '@infinicanvas/engine';
+import type { ContentWarning } from '@infinicanvas/engine';
 
 /** Result from the shareAsUrl action. */
 export interface ShareResult {
@@ -26,6 +27,8 @@ export interface ShareResult {
   byteLength?: number;
   /** Whether the URL was copied to clipboard (false if clipboard API unavailable/denied). */
   clipboardCopied?: boolean;
+  /** Warnings about content stripped for safety. */
+  warnings?: ContentWarning[];
 }
 
 /** Return type of the useUrlCanvas hook. */
@@ -34,6 +37,8 @@ export interface UseUrlCanvasReturn {
   shareAsUrl: () => Promise<ShareResult>;
   /** Whether canvas was loaded from a URL on mount. */
   loadedFromUrl: boolean;
+  /** Warnings from loading a URL-shared canvas (e.g., stripped images). */
+  loadWarnings: ContentWarning[];
 }
 
 /** Parse the hash fragment into key-value pairs (simple key=value;key2=value2). */
@@ -71,6 +76,7 @@ function buildHash(map: Map<string, string>): string {
  */
 export function useUrlCanvas(): UseUrlCanvasReturn {
   const [loadedFromUrl, setLoadedFromUrl] = useState(false);
+  const [loadWarnings, setLoadWarnings] = useState<ContentWarning[]>([]);
   const initialLoadDone = useRef(false);
 
   // Load from URL hash on mount (once)
@@ -90,6 +96,10 @@ export function useUrlCanvas(): UseUrlCanvasReturn {
         result.data.expressionOrder,
       );
       setLoadedFromUrl(true);
+      if (result.warnings.length > 0) {
+        setLoadWarnings(result.warnings);
+        console.warn('[useUrlCanvas] Content stripped from shared URL:', result.warnings.map((w) => w.message).join('; '));
+      }
     } else {
       console.warn('[useUrlCanvas] Corrupt URL data, loading blank canvas:', result.error);
     }
@@ -135,8 +145,9 @@ export function useUrlCanvas(): UseUrlCanvasReturn {
       url: newUrl,
       byteLength: encodeResult.byteLength,
       clipboardCopied,
+      warnings: encodeResult.warnings,
     };
   }, []);
 
-  return { shareAsUrl, loadedFromUrl };
+  return { shareAsUrl, loadedFromUrl, loadWarnings };
 }

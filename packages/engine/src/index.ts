@@ -196,7 +196,7 @@ export { exportToPng, computeExportBounds, EXPORT_PADDING } from './export/toPng
 export type { ExportBounds } from './export/toPng.js';
 export { buildSvgString, downloadSvg } from './export/toSvg.js';
 export { encodeCanvasForUrl, decodeCanvasFromUrl } from './export/urlCodec.js';
-export type { UrlEncodeResult, UrlEncodeError, UrlEncodeOutcome } from './export/urlCodec.js';
+export type { UrlEncodeResult, UrlEncodeError, UrlEncodeOutcome, UrlDecodeResult, UrlDecodeSuccess, UrlDecodeError, ContentWarning } from './export/urlCodec.js';
 
 // ── Hooks ──────────────────────────────────────────────────
 export { useCanvasInteraction } from './hooks/useCanvasInteraction.js';

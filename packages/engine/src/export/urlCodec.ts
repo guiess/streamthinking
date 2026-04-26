@@ -11,13 +11,23 @@
 
 import { deflateRaw, inflateRaw } from 'pako';
 import { importFromJson } from './fromJson.js';
-import type { ImportResult } from './fromJson.js';
+import type { VisualExpression } from '@infinicanvas/protocol';
 
 /** Default maximum compressed size in bytes (32 KB). */
 const DEFAULT_MAX_BYTES = 32_768;
 
 /** Maximum decompressed size in bytes (2 MB) — guards against decompression bombs. */
 const MAX_INFLATED_BYTES = 2_097_152;
+
+/** Content types that are unsafe for URL-shared canvases. */
+type UnsafeContentType = 'external-image' | 'svg-data-uri';
+
+/** Warning about content stripped during encode or decode. */
+export interface ContentWarning {
+  type: UnsafeContentType;
+  count: number;
+  message: string;
+}
 
 /** Successful URL encode result. */
 export interface UrlEncodeResult {
@@ -26,6 +36,8 @@ export interface UrlEncodeResult {
   encoded: string;
   /** Compressed byte count. */
   byteLength: number;
+  /** Warnings about content that was stripped for safety. */
+  warnings: ContentWarning[];
 }
 
 /** Failed URL encode result with diagnostic info. */
@@ -40,6 +52,64 @@ export interface UrlEncodeError {
 export type UrlEncodeOutcome = UrlEncodeResult | UrlEncodeError;
 
 // ── Helpers ───────────────────────────────────────────────────
+
+/** Check if an image src is an external URL (not a safe data:image/ URI). */
+function isExternalUrl(src: string): boolean {
+  return /^https?:\/\//i.test(src);
+}
+
+/** Check if an image src is an SVG data URI (potential script vector). */
+function isSvgDataUri(src: string): boolean {
+  return /^data:image\/svg/i.test(src);
+}
+
+/**
+ * Sanitize expressions for URL sharing — strip unsafe content.
+ *
+ * Removes external image URLs (tracking risk) and SVG data URIs
+ * (potential script injection via foreignObject). Returns sanitized
+ * expressions and warnings about what was stripped.
+ */
+function sanitizeForUrl(
+  expressions: Record<string, VisualExpression>,
+): { sanitized: Record<string, VisualExpression>; warnings: ContentWarning[] } {
+  const sanitized: Record<string, VisualExpression> = {};
+  let externalCount = 0;
+  let svgCount = 0;
+
+  for (const [id, expr] of Object.entries(expressions)) {
+    if (expr.kind === 'image' && expr.data.kind === 'image') {
+      const src = expr.data.src;
+      if (isExternalUrl(src)) {
+        externalCount++;
+        continue; // strip entirely
+      }
+      if (isSvgDataUri(src)) {
+        svgCount++;
+        continue; // strip entirely
+      }
+    }
+    sanitized[id] = expr;
+  }
+
+  const warnings: ContentWarning[] = [];
+  if (externalCount > 0) {
+    warnings.push({
+      type: 'external-image',
+      count: externalCount,
+      message: `${externalCount} external image(s) removed — external URLs are not allowed in shared links for privacy`,
+    });
+  }
+  if (svgCount > 0) {
+    warnings.push({
+      type: 'svg-data-uri',
+      count: svgCount,
+      message: `${svgCount} SVG image(s) removed — SVG data URIs are not allowed in shared links for security`,
+    });
+  }
+
+  return { sanitized, warnings };
+}
 
 /** Convert a Uint8Array to a base64url string (no padding). */
 function toBase64Url(bytes: Uint8Array): string {
@@ -87,20 +157,34 @@ export function encodeCanvasForUrl(
   maxBytes: number = DEFAULT_MAX_BYTES,
 ): UrlEncodeOutcome {
   // Guard: empty canvas
+  let payload: { version: string; expressions: Record<string, VisualExpression>; expressionOrder: string[] };
   try {
-    const parsed = JSON.parse(json) as Record<string, unknown>;
-    const expressions = parsed['expressions'] as Record<string, unknown> | undefined;
-    if (!expressions || Object.keys(expressions).length === 0) {
+    payload = JSON.parse(json) as typeof payload;
+    if (!payload.expressions || Object.keys(payload.expressions).length === 0) {
       return { success: false, error: 'Nothing to share — canvas is empty' };
     }
   } catch {
     return { success: false, error: 'Invalid JSON input' };
   }
 
+  // Sanitize: strip external images and SVG data URIs
+  const { sanitized, warnings } = sanitizeForUrl(payload.expressions);
+  const sanitizedOrder = payload.expressionOrder.filter((id) => id in sanitized);
+
+  if (Object.keys(sanitized).length === 0) {
+    return { success: false, error: 'Nothing to share — all expressions were removed during safety check' };
+  }
+
+  const sanitizedJson = JSON.stringify({
+    version: payload.version,
+    expressions: sanitized,
+    expressionOrder: sanitizedOrder,
+  });
+
   // Compress: UTF-8 → deflateRaw
   let deflated: Uint8Array;
   try {
-    const utf8 = new TextEncoder().encode(json);
+    const utf8 = new TextEncoder().encode(sanitizedJson);
     deflated = deflateRaw(utf8);
   } catch (err) {
     return {
@@ -123,18 +207,38 @@ export function encodeCanvasForUrl(
   // Encode to base64url
   const encoded = toBase64Url(deflated);
 
-  return { success: true, encoded, byteLength };
+  return { success: true, encoded, byteLength, warnings };
 }
+
+/** Decode result with warnings about stripped content. */
+export interface UrlDecodeSuccess {
+  success: true;
+  data: {
+    expressions: VisualExpression[];
+    expressionOrder: string[];
+  };
+  /** Warnings about content stripped during decode. */
+  warnings: ContentWarning[];
+}
+
+export interface UrlDecodeError {
+  success: false;
+  error: string;
+}
+
+/** Discriminated union for decode outcomes. */
+export type UrlDecodeResult = UrlDecodeSuccess | UrlDecodeError;
 
 /**
  * Decode a URL-encoded canvas string back into validated canvas state.
  *
  * Handles corrupt base64, corrupt deflate, corrupt JSON, and invalid schema.
- * Returns the same ImportResult type as importFromJson — never throws.
+ * Strips external image URLs and SVG data URIs for security.
+ * Returns a discriminated result — never throws.
  *
  * @param encoded - base64url string from URL hash fragment
  */
-export function decodeCanvasFromUrl(encoded: string): ImportResult {
+export function decodeCanvasFromUrl(encoded: string): UrlDecodeResult {
   if (!encoded || encoded.trim() === '') {
     return { success: false, error: 'Empty URL data' };
   }
@@ -160,5 +264,23 @@ export function decodeCanvasFromUrl(encoded: string): ImportResult {
   }
 
   // Step 3: JSON parse + Zod validation via importFromJson
-  return importFromJson(jsonString);
+  const importResult = importFromJson(jsonString);
+  if (!importResult.success) {
+    return importResult;
+  }
+
+  // Step 4: Sanitize — strip unsafe content from decoded expressions
+  const exprRecord: Record<string, VisualExpression> = {};
+  for (const expr of importResult.data.expressions) {
+    exprRecord[expr.id] = expr;
+  }
+  const { sanitized, warnings } = sanitizeForUrl(exprRecord);
+  const sanitizedExprs = importResult.data.expressions.filter((e) => e.id in sanitized);
+  const sanitizedOrder = importResult.data.expressionOrder.filter((id) => id in sanitized);
+
+  return {
+    success: true,
+    data: { expressions: sanitizedExprs, expressionOrder: sanitizedOrder },
+    warnings,
+  };
 }

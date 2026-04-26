@@ -42,7 +42,7 @@ export function App() {
   const waypointPanelOpen = useCanvasStore((s) => s.waypointPanelOpen);
   const setWaypointPanelOpen = useCanvasStore((s) => s.setWaypointPanelOpen);
   const gatewayState = useGatewayConnection();
-  const { shareAsUrl } = useUrlCanvas();
+  const { shareAsUrl, loadWarnings } = useUrlCanvas();
   const { isLoading: agentLoading } = useAgentActionHandler(
     gatewayState.sendMessage,
     gatewayState.connected,
@@ -133,7 +133,7 @@ export function App() {
       >
         <ThemeToggle />
         <ThemePickerPanel />
-        <ExportMenu shareAsUrl={shareAsUrl} />
+        <ExportMenu shareAsUrl={shareAsUrl} loadWarnings={loadWarnings} />
         <ConnectionStatus {...gatewayState} />
         <button
           type="button"

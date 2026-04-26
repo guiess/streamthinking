@@ -17,7 +17,9 @@ import { Download } from 'lucide-react';
 /** Props for ExportMenu. */
 interface ExportMenuProps {
   /** Share current canvas as a URL (from useUrlCanvas hook). */
-  shareAsUrl?: () => Promise<{ success: boolean; url?: string; error?: string; byteLength?: number; clipboardCopied?: boolean }>;
+  shareAsUrl?: () => Promise<{ success: boolean; url?: string; error?: string; byteLength?: number; clipboardCopied?: boolean; warnings?: { message: string }[] }>;
+  /** Warnings from loading a URL-shared canvas (stripped content). */
+  loadWarnings?: { message: string }[];
 }
 
 /** Menu option definition. */
@@ -28,11 +30,31 @@ interface MenuOption {
 }
 
 /** Export/Import menu dropdown component. */
-export function ExportMenu({ shareAsUrl }: ExportMenuProps) {
+export function ExportMenu({ shareAsUrl, loadWarnings }: ExportMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const drawioFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Show load warnings once on mount (content stripped from imported URL)
+  const loadWarningShown = useRef(false);
+  if (loadWarnings && loadWarnings.length > 0 && !loadWarningShown.current) {
+    loadWarningShown.current = true;
+    // Defer to avoid setting state during render
+    setTimeout(() => {
+      const msg = loadWarnings.map((w) => w.message).join('\n');
+      setFeedback(`⚠️ ${msg}`);
+      feedbackTimerRef.current = setTimeout(() => setFeedback(null), 6000);
+    }, 500);
+  }
+
+  /** Show feedback message with auto-dismiss. */
+  const showFeedback = useCallback((msg: string, durationMs = 4000) => {
+    if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+    setFeedback(msg);
+    feedbackTimerRef.current = setTimeout(() => setFeedback(null), durationMs);
+  }, []);
 
   const handleExportJson = useCallback(() => {
     const { expressions, expressionOrder } = useCanvasStore.getState();
@@ -117,14 +139,21 @@ export function ExportMenu({ shareAsUrl }: ExportMenuProps) {
     setIsOpen(false);
     void shareAsUrl().then((result) => {
       if (result.success) {
-        setFeedback(result.clipboardCopied ? 'URL copied to clipboard!' : 'URL updated in address bar (clipboard unavailable)');
+        const parts: string[] = [];
+        if (result.clipboardCopied) {
+          parts.push('URL copied to clipboard!');
+        } else {
+          parts.push('URL updated in address bar (clipboard unavailable)');
+        }
+        if (result.warnings && result.warnings.length > 0) {
+          parts.push('⚠️ ' + result.warnings.map((w) => w.message).join('; '));
+        }
+        showFeedback(parts.join('\n'), result.warnings?.length ? 6000 : 3000);
       } else {
-        setFeedback(result.error ?? 'Share failed');
+        showFeedback(result.error ?? 'Share failed', 5000);
       }
-      // Clear feedback after 3 seconds
-      setTimeout(() => setFeedback(null), 3000);
     });
-  }, [shareAsUrl]);
+  }, [shareAsUrl, showFeedback]);
 
   const handleDrawioFileSelected = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
